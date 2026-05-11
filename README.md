@@ -133,6 +133,7 @@ src/
 ├── workers/
 │   └── openscad-worker.ts     # Web Worker for compilation
 └── styles/                    # Global styles
+```
 
 ## AI Tools & Workflows
 
