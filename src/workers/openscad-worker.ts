@@ -1,5 +1,9 @@
+import { ensureOpenSCADLibraries } from "@/lib/openscad-library-cache";
+import { OPENSCAD_LIBRARY_DEFINITIONS } from "@/lib/openscad-library-manifest";
+
 let instance: any = null;
 let loading: Promise<any> | null = null;
+let librariesMounted: Promise<void> | null = null;
 
 async function loadOpenSCAD(): Promise<any> {
   if (instance) return instance;
@@ -27,6 +31,8 @@ async function loadOpenSCAD(): Promise<any> {
         },
       });
 
+      await mountLibraries(instance.FS);
+
       return instance;
     } catch (err) {
       loading = null;
@@ -37,6 +43,19 @@ async function loadOpenSCAD(): Promise<any> {
   })();
 
   return loading;
+}
+
+async function mountLibraries(fs: any) {
+  if (!librariesMounted) {
+    librariesMounted = (async () => {
+      await ensureOpenSCADLibraries(fs, OPENSCAD_LIBRARY_DEFINITIONS);
+    })().catch((error) => {
+      librariesMounted = null;
+      throw error;
+    });
+  }
+
+  await librariesMounted;
 }
 
 async function handleInvocation(invocation: {
