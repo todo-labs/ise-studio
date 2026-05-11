@@ -4,16 +4,17 @@ import { AIChat } from "./ai-chat";
 import { CodeEditor } from "./code-editor";
 import { PreviewPanel } from "./preview-panel";
 import { IDEHeader } from "./ide-header";
+import type { EditorSelection } from "@/lib/ai-tools";
 
 export function IDELayout() {
-  const [code, setCode] = useState(`// DSL sample: create a hollow cube shell
-render(
-  difference(
-    cube({ size: 40, center: true }),
-    translate([0, 0, 4], cube({ size: 32, center: true }))
-  )
-);`);
+  const [code, setCode] = useState(`// OpenSCAD: hollow cube shell
+difference() {
+  cube([40, 40, 40], center=true);
+  translate([0, 0, 4])
+    cube([32, 32, 32], center=true);
+}`);
   const [isChatOpen, setIsChatOpen] = useState(true);
+  const [selection, setSelection] = useState<EditorSelection | null>(null);
   const compileFunctionRef = useRef<(() => void) | null>(null);
 
   // Keyboard shortcut for toggling chat (Ctrl/Cmd + Shift + C)
@@ -38,7 +39,16 @@ render(
         {isChatOpen && (
           <>
             <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
-              <AIChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} currentCode={code} />
+              <AIChat
+                isOpen={isChatOpen}
+                onClose={() => setIsChatOpen(false)}
+                currentCode={code}
+                currentSelection={selection}
+                onCodeChange={(updatedCode) => {
+                  setCode(updatedCode);
+                  setSelection(null);
+                }}
+              />
             </ResizablePanel>
             <ResizableHandle withHandle />
           </>
@@ -52,7 +62,7 @@ render(
               <CodeEditor
                 code={code}
                 onCodeChange={setCode}
-                onRender={() => compileFunctionRef.current?.()}
+                onSelectionChange={setSelection}
               />
             </ResizablePanel>
 
