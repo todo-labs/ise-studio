@@ -1,53 +1,50 @@
 # ISE Studio
 
-An open-source, client-side web IDE for an OpenSCAD-inspired DSL with AI-powered assistance. Built with Vite, React, TypeScript, and shadcn/ui.
+An open-source, browser-based IDE for OpenSCAD with AI-powered coding assistance. Write, compile, and preview 3D models directly in your browser using the official OpenSCAD compiler via WebAssembly.
 
-![ISE Studio](https://via.placeholder.com/800x400?text=ISE+Studio+Preview)
+Built with **Vite**, **React 19**, **TypeScript**, **Monaco Editor**, and **shadcn/ui**.
 
 ## Features
 
-🚀 **Modern IDE Experience**
+🚀 **Native OpenSCAD Support**
 
-- VSCode-like interface with resizable panels
-- File explorer with context menus
-- Tabbed editor with Monaco Editor
-- Real-time 3D preview
-- Syntax highlighting for OpenSCAD
+- Full OpenSCAD language support with real compiler via WebAssembly
+- Monaco Editor with syntax highlighting and code intelligence
+- Live compilation with auto-preview (debounced for performance)
+- Direct STL and OBJ export from OpenSCAD models
+- Responsive resizable layout
 
-🤖 **AI-Powered Assistance**
+🤖 **AI-Powered Development**
 
-- Code generation and explanation
-- Interactive chat assistant
-- Smart code suggestions tuned for the DSL
-- Bring your own API key for direct browser-to-provider AI calls
+- Interactive AI chat assistant powered by OpenRouter
+- Tool-based AI workflows with code validation and modification
+- Search OpenSCAD documentation in context
+- AI-assisted code editing with selection awareness
+- Bring your own API key (no backend required)
+- Agentic function calling for intelligent code suggestions
 
-🎨 **Beautiful UI**
+🎨 **Modern UI**
 
-- Built with shadcn/ui components
+- Built with shadcn/ui components  
 - Dark/light theme support
-- Responsive design
-- Keyboard shortcuts
-
-⚙️ **DSL-native Preview**
-
-- Custom OpenSCAD-like builder API
-- Instant Three.js previews via signed-distance fields + Marching Cubes
-- Export clean `.scad` files for the desktop OpenSCAD app
-- No WebAssembly dependency required
+- Keyboard shortcuts (Ctrl+Shift+C for chat toggle, F5 for render)
+- Accessible and responsive design
+- Clean, distraction-free interface
 
 ⚡ **Performance**
 
 - Built with Vite + React 19
-- TypeScript for type safety
-- Tailwind CSS for styling
-- Three.js for 3D rendering
+- TypeScript for full type safety
+- Tailwind CSS with utility-first styling
+- Web Workers for compilation without blocking UI
+- CORS-enabled WASM execution with COOP/COEP headers
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+ or Bun
-- Your own OpenAI, Anthropic, or Gemini API key for AI features
+- An API key from OpenRouter (supports OpenAI, Anthropic, Google, and 200+ models)
 
 ### Installation
 
@@ -74,56 +71,92 @@ bun dev
 npm run dev
 ```
 
-4. Open the Vite URL shown in your terminal, usually [http://localhost:5173](http://localhost:5173).
+4. Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-### Setting up AI Features
+### Setting Up AI Features
 
-1. Click Settings in the header
-2. Select your AI provider and enter your API key
-3. Start using AI assistance!
+1. Click **Settings** in the top right of the header
+2. Paste your OpenRouter API key
+3. Select a model (defaults to Claude 3.5 Sonnet)
+4. Start using AI-assisted coding!
 
-API keys are stored in browser local storage and sent directly from the browser to the selected AI provider. This app does not require a backend server for AI features.
+Your API key is stored securely in your browser's local storage and sent directly to OpenRouter—no backend server needed.
+
+## Architecture
+
+ISE Studio uses a client-first architecture:
+
+- **OpenSCAD Compilation**: Official OpenSCAD compiler compiled to WebAssembly
+- **Web Workers**: Compilation runs in a background worker to keep the UI responsive
+- **3D Rendering**: Three.js renders STL/OBJ geometry data from the compiler
+- **AI Integration**: OpenRouter API handles all LLM requests with tool calling support
+- **Local Tools**: Validate syntax, inspect geometry, search docs, and apply code patches via AI functions
 
 ## Tech Stack
 
-- **Framework**: Vite + React 19
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS + shadcn/ui
-- **UI Components**: shadcn/ui
-- **Code Editor**: Monaco Editor
-- **3D Rendering**: React Three Fiber + custom Marching Cubes pipeline
-- **DSL**: OpenSCAD-inspired builder that round-trips to `.scad`
-- **AI**: Client-side provider API calls with user-supplied keys
+- **Frontend**: Vite 7 + React 19 + TypeScript
+- **Editor**: Monaco Editor with OpenSCAD language support
+- **Styling**: Tailwind CSS 4 + shadcn/ui components
+- **3D Rendering**: Three.js + React Three Fiber
+- **OpenSCAD Compiler**: Official OpenSCAD compiled to WebAssembly
+- **Geometry Parsing**: OBJ and STL parser for WASM output
+- **AI**: OpenRouter API with agentic function calling
 - **Icons**: Lucide React
+- **Build Tools**: Vite with worker and WASM support
 
 ## Project Structure
 
 ```
 src/
-├── App.tsx             # Vite application root
-├── main.tsx            # Browser entry point
+├── App.tsx                    # Main application component
+├── main.tsx                   # Browser entry point
 ├── components/
-│   ├── ide/            # IDE-specific components
-│   │   ├── ide-layout.tsx
-│   │   ├── file-explorer.tsx
-│   │   ├── code-editor.tsx
-│   │   ├── preview-panel.tsx
-│   │   └── ai-chat.tsx
-│   └── ui/             # shadcn/ui components
-├── lib/                # Utilities, DSL, and client-side AI providers
-└── styles/            # Global styles
-```
+│   ├── ide/
+│   │   ├── ide-layout.tsx     # Main IDE layout with panels
+│   │   ├── ide-header.tsx     # Header with theme toggle
+│   │   ├── code-editor.tsx    # Monaco editor with selection tracking
+│   │   ├── preview-panel.tsx  # Preview pane with compile controls
+│   │   ├── scad-viewer.tsx    # 3D viewer for compiled geometry
+│   │   ├── ai-chat.tsx        # AI assistant chat panel
+│   │   └── file-explorer.tsx  # File tree (future)
+│   ├── ai-elements/           # AI chat UI components
+│   └── ui/                    # shadcn/ui components
+├── lib/
+│   ├── openscad-runner.ts     # WASM compiler interface
+│   ├── off-parser.ts          # OBJ format parser
+│   ├── ai-client.ts           # OpenRouter API integration
+│   ├── ai-tools.ts            # AI tool definitions and handlers
+│   ├── openscad-docs.ts       # OpenSCAD documentation data
+│   ├── openscad-monaco.ts     # Monaco language support
+│   ├── ai-settings.ts         # Settings persistence
+│   └── utils/                 # Utility functions
+├── workers/
+│   └── openscad-worker.ts     # Web Worker for compilation
+└── styles/                    # Global styles
+
+## AI Tools & Workflows
+
+ISE Studio provides AI-powered tools that enable intelligent code modifications:
+
+- **`validate_dsl`**: Check OpenSCAD syntax and compilation errors
+- **`inspect_scene`**: Analyze the compiled geometry (bounds, face count, etc.)
+- **`search_docs`**: Search OpenSCAD documentation for functions and examples
+- **`apply_patch_to_selection`**: Apply code edits to the current selection or whole document
+- **`openrouter:web_search`**: Optional web search for external references
+
+The AI assistant can chain these tools together to help you write, debug, and optimize OpenSCAD code.
 
 ## Roadmap
 
-- [ ] STL exports generated from the DSL geometry
-- [ ] Richer DSL surface area (text, hull, minkowski, tapered cylinders, etc.)
-- [ ] File import/export (.scad, .stl)
-- [ ] Advanced AI features (code refactoring, optimization)
-- [ ] Collaborative editing
-- [ ] Plugin system
-- [ ] Mobile support
-- [ ] Offline mode
+- [ ] File explorer with project management
+- [ ] Multi-file support with imports
+- [ ] Collaborative editing with Yjs
+- [ ] Custom themes and editor configurations
+- [ ] Performance profiling and optimization tips
+- [ ] Community snippet library
+- [ ] Desktop app via Tauri
+- [ ] VS Code extension
+- [ ] GPU-accelerated preview for complex models
 
 ## Contributing
 
@@ -141,11 +174,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- [OpenSCAD](https://openscad.org/) for the amazing 3D modeling language
-- [shadcn/ui](https://ui.shadcn.com/) for the beautiful UI components
-- [Monaco Editor](https://microsoft.github.io/monaco-editor/) for the code editor
-- [Three.js](https://threejs.org/) for 3D rendering
-- OpenAI, Anthropic, and Google Gemini for AI provider APIs
+**Special thanks to the [OpenSCAD Playground](https://github.com/openscad/openscad-playground) project** for pioneering browser-based OpenSCAD editing and the compilation architecture that inspired ISE Studio.
+
+We also extend our gratitude to:
+
+- [OpenSCAD](https://openscad.org/) - The amazing 3D modeling language
+- [shadcn/ui](https://ui.shadcn.com/) - Beautiful, accessible UI components
+- [Monaco Editor](https://microsoft.github.io/monaco-editor/) - Professional code editor
+- [Three.js](https://threejs.org/) - 3D graphics library
+- [OpenRouter](https://openrouter.ai/) - Unified LLM API
+- The open-source community for all the amazing tools and libraries
 
 ## Support
 
