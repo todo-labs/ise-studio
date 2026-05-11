@@ -1,9 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Bot, GlobeIcon } from "lucide-react";
+import { useChat } from "@ai-sdk/react";
+import {
+  DirectChatTransport,
+  getToolName,
+  isTextUIPart,
+  isToolUIPart,
+} from "ai";
 
 import {
   Conversation,
   ConversationContent,
+  ConversationEmptyState,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
@@ -24,7 +32,7 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
-import { sendAIMessage, type ChatMessage } from "@/lib/ai-client";
+import { createOpenRouterChatAgent } from "@/lib/openrouter-chat-agent";
 import type { EditorSelection } from "@/lib/ai-tools";
 import {
   AI_SETTINGS_EVENT,
@@ -35,12 +43,6 @@ import {
   type AISettings,
 } from "@/lib/ai-settings";
 import { cn } from "@/lib/utils";
-
-interface MessageItem {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-}
 
 interface AIChatProps {
   isOpen: boolean;
@@ -57,22 +59,15 @@ export function AIChat({
   currentSelection,
   onCodeChange,
 }: AIChatProps) {
-  const [messages, setMessages] = useState<MessageItem[]>([
-    {
-      id: "1",
-      role: "assistant",
-      content:
-        "Hello! I'm your ISE Studio AI assistant. I can help write, explain, and debug OpenSCAD-style DSL code.",
-    },
-  ]);
   const [input, setInput] = useState("");
   const [settings, setSettings] = useState<AISettings>(() =>
     typeof window === "undefined"
       ? { apiKey: "", model: OPENROUTER_PROVIDER.defaultModel }
       : loadAISettings(),
   );
-  const [status, setStatus] = useState<"ready" | "submitted" | "streaming" | "error">("ready");
   const [useWebSearch, setUseWebSearch] = useState(false);
+  const codeRef = useRef(currentCode ?? "");
+  const selectionRef = useRef<EditorSelection | null>(currentSelection ?? null);
 
   useEffect(() => {
     const refreshSettings = () => setSettings(loadAISettings());
@@ -80,15 +75,37 @@ export function AIChat({
     return () => window.removeEventListener(AI_SETTINGS_EVENT, refreshSettings);
   }, []);
 
+  useEffect(() => {
+    codeRef.current = currentCode ?? "";
+  }, [currentCode]);
+
+  useEffect(() => {
+    selectionRef.current = currentSelection ?? null;
+  }, [currentSelection]);
+
+  const agent = useMemo(() => {
+    if (!settings.apiKey.trim()) return null;
+
+    return createOpenRouterChatAgent({
+      apiKey: settings.apiKey,
+      model: settings.model,
+      useWebSearch,
+      getCurrentCode: () => codeRef.current,
+      getCurrentSelection: () => selectionRef.current,
+      onCodeUpdate: onCodeChange,
+    });
+  }, [onCodeChange, settings.apiKey, settings.model, useWebSearch]);
+
+  const transport = useMemo(() => {
+    if (!agent) return null;
+    return new DirectChatTransport({ agent });
+  }, [agent]);
+
+  const { messages, sendMessage, status, error } = useChat({
+    transport: transport ?? undefined,
+  });
+
   const hasApiKey = Boolean(settings.apiKey.trim());
-  const conversation = useMemo<ChatMessage[]>(
-    () =>
-      messages.map(({ role, content }) => ({
-        role,
-        content,
-      })),
-    [messages],
-  );
 
   const handleModelChange = (model: string) => {
     setSettings((previous) => ({ ...previous, model }));
@@ -97,50 +114,10 @@ export function AIChat({
 
   const handleSubmit = async (message: PromptInputMessage) => {
     const text = message.text.trim();
-
     if (!text || status === "submitted" || status === "streaming") return;
 
-    const userMessage: MessageItem = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: text,
-    };
-
-    setMessages((previous) => [...previous, userMessage]);
     setInput("");
-    setStatus("submitted");
-
-    try {
-      setStatus("streaming");
-      const content = await sendAIMessage({
-        settings,
-        messages: [...conversation, { role: "user", content: text }],
-        currentCode,
-        selection: currentSelection,
-        useWebSearch,
-        onCodeUpdate: onCodeChange,
-      });
-
-      setMessages((previous) => [
-        ...previous,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content,
-        },
-      ]);
-      setStatus("ready");
-    } catch (error) {
-      setMessages((previous) => [
-        ...previous,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: error instanceof Error ? error.message : "OpenRouter request failed.",
-        },
-      ]);
-      setStatus("error");
-    }
+    await sendMessage({ text });
   };
 
   if (!isOpen) return null;
@@ -156,22 +133,72 @@ export function AIChat({
 
       <Conversation>
         <ConversationContent>
+          {messages.length === 0 ? (
+            <ConversationEmptyState
+              title="Start a conversation"
+              description="Ask about OpenSCAD code, rendering, or the current scene."
+            />
+          ) : null}
           {messages.map((message) => (
-            <Message from={message.role} key={message.id}>
-              <MessageContent
-                className={cn(message.role === "user" && "bg-primary text-primary-foreground")}
-              >
-                <MessageResponse>{message.content}</MessageResponse>
-              </MessageContent>
-            </Message>
+            <div key={message.id} className="space-y-3">
+              {message.role === "user" ? (
+                <Message from="user">
+                  <MessageContent className="bg-primary text-primary-foreground">
+                    {message.parts.map((part, index) =>
+                      isTextUIPart(part) ? (
+                        <MessageResponse key={`${message.id}-${index}`}>{part.text}</MessageResponse>
+                      ) : null,
+                    )}
+                  </MessageContent>
+                </Message>
+              ) : (
+                <div className="space-y-3 px-1 text-sm leading-6">
+                  {message.parts.map((part, index) => {
+                    if (isTextUIPart(part)) {
+                      return (
+                        <MessageResponse key={`${message.id}-${index}`}>{part.text}</MessageResponse>
+                      );
+                    }
+
+                    if (part.type === "dynamic-tool" || isToolUIPart(part)) {
+                      const toolName = getToolName(part);
+                      const title =
+                        part.state === "output-available"
+                          ? `Tool result: ${toolName}`
+                          : part.state === "output-error"
+                            ? `Tool error: ${toolName}`
+                            : `Tool call: ${toolName}`;
+                      const body =
+                        part.state === "output-available"
+                          ? part.output
+                          : part.state === "output-error"
+                            ? { errorText: part.errorText }
+                            : part.input;
+
+                      return (
+                        <Message from="data" key={`${message.id}-${index}`}>
+                          <MessageContent className="bg-muted/60 border border-border/60">
+                            <div className="space-y-1">
+                              <div className="text-muted-foreground text-xs font-medium">{title}</div>
+                              <pre className="text-muted-foreground max-h-56 overflow-auto whitespace-pre-wrap break-words text-xs">
+                                {JSON.stringify(body, null, 2)}
+                              </pre>
+                            </div>
+                          </MessageContent>
+                        </Message>
+                      );
+                    }
+
+                    return null;
+                  })}
+                </div>
+              )}
+            </div>
           ))}
           {status === "submitted" || status === "streaming" ? (
-            <Message from="assistant">
-              <MessageContent>
-                <span className="text-muted-foreground text-sm">Thinking...</span>
-              </MessageContent>
-            </Message>
+            <div className="max-w-[85%] px-1 text-sm text-muted-foreground">Thinking...</div>
           ) : null}
+          {error ? <div className="max-w-[85%] px-1 text-sm text-red-500">{error.message}</div> : null}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>

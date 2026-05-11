@@ -4,8 +4,7 @@ export const AI_SETTINGS_EVENT = "ise-ai-settings-updated";
 
 export const OPENROUTER_MODELS = [
   { id: "openrouter/auto", name: "Auto Router" },
-  { id: "deepseek/deepseek-chat-v3.1", name: "DeepSeek V3.1" },
-  { id: "deepseek/deepseek-r1", name: "DeepSeek R1" },
+  { id: "deepseek/deepseek-v4-flash", name: "DeepSeek V4 Flash" },
   { id: "z-ai/glm-5.1", name: "GLM 5.1" },
   { id: "moonshotai/kimi-k2", name: "Kimi K2" },
   { id: "anthropic/claude-opus-4.7", name: "Claude Opus 4.7" },
