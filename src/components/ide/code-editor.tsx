@@ -1,32 +1,60 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
+import type { Selection } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
-import { Play } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useThemeMode } from "@/components/theme/theme-provider";
 
+import type { EditorSelection } from "@/lib/ai-tools";
 import { buildInstance } from "@/lib/openscad-monaco";
 
 interface CodeEditorProps {
   code: string;
   onCodeChange: (content: string) => void;
-  onRender?: () => void;
+  onSelectionChange?: (selection: EditorSelection | null) => void;
 }
 
-export function CodeEditor({ code, onCodeChange, onRender }: CodeEditorProps) {
+export function CodeEditor({ code, onCodeChange, onSelectionChange }: CodeEditorProps) {
   const editorRef = useRef<unknown>(null);
+  const selectionDisposableRef = useRef<{ dispose: () => void } | null>(null);
   const { theme } = useThemeMode();
+
+  const emitSelection = () => {
+    const editor = editorRef.current as {
+      getSelection?: () => Selection | null;
+      getModel?: () => Monaco.editor.ITextModel | null;
+    } | null;
+
+    const selectionRange = editor?.getSelection?.();
+    const model = editor?.getModel?.();
+    if (!selectionRange || !model) {
+      onSelectionChange?.(null);
+      return;
+    }
+
+    onSelectionChange?.({
+      text: model.getValueInRange(selectionRange),
+      range: {
+        startLineNumber: selectionRange.startLineNumber,
+        startColumn: selectionRange.startColumn,
+        endLineNumber: selectionRange.endLineNumber,
+        endColumn: selectionRange.endColumn,
+      },
+    });
+  };
 
   const handleEditorDidMount = (
     editor: Monaco.editor.IStandaloneCodeEditor,
     monacoInstance: typeof Monaco,
   ) => {
     editorRef.current = editor;
+    selectionDisposableRef.current?.dispose();
+    selectionDisposableRef.current = editor.onDidChangeCursorSelection(() => {
+      emitSelection();
+    });
 
     buildInstance(monacoInstance);
+    emitSelection();
 
     try {
       const monacoEditor = editor as { focus?: () => void };
@@ -38,41 +66,15 @@ export function CodeEditor({ code, onCodeChange, onRender }: CodeEditorProps) {
     }
   };
 
-  const handleRender = () => {
-    if (onRender) {
-      console.log("Render button clicked, calling onRender");
-      onRender();
-    } else {
-      console.log("Render clicked but no onRender callback provided");
-    }
-  };
+  useEffect(() => {
+    return () => {
+      selectionDisposableRef.current?.dispose();
+      selectionDisposableRef.current = null;
+    };
+  }, []);
 
   return (
     <div className="bg-background flex h-full flex-col">
-      {/* Editor Header */}
-      <div className="bg-muted/30 flex items-center justify-between border-b p-2">
-        <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="text-xs">
-            OpenSCAD
-          </Badge>
-        </div>
-
-        <div className="flex items-center space-x-1">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button aria-label="Compile and preview" size="icon" variant="default" onClick={handleRender}>
-                  <Play className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Compile and Preview</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </div>
-
       {/* Monaco Editor */}
       <div
         className="flex-1"
