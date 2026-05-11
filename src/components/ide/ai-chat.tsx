@@ -25,6 +25,7 @@ import {
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
 import { sendAIMessage, type ChatMessage } from "@/lib/ai-client";
+import type { EditorSelection } from "@/lib/ai-tools";
 import {
   AI_SETTINGS_EVENT,
   loadAISettings,
@@ -45,9 +46,17 @@ interface AIChatProps {
   isOpen: boolean;
   onClose: () => void;
   currentCode?: string;
+  currentSelection?: EditorSelection | null;
+  onCodeChange: (code: string) => void;
 }
 
-export function AIChat({ isOpen, onClose: _onClose, currentCode }: AIChatProps) {
+export function AIChat({
+  isOpen,
+  onClose: _onClose,
+  currentCode,
+  currentSelection,
+  onCodeChange,
+}: AIChatProps) {
   const [messages, setMessages] = useState<MessageItem[]>([
     {
       id: "1",
@@ -107,7 +116,9 @@ export function AIChat({ isOpen, onClose: _onClose, currentCode }: AIChatProps) 
         settings,
         messages: [...conversation, { role: "user", content: text }],
         currentCode,
+        selection: currentSelection,
         useWebSearch,
+        onCodeUpdate: onCodeChange,
       });
 
       setMessages((previous) => [
@@ -174,7 +185,7 @@ export function AIChat({ isOpen, onClose: _onClose, currentCode }: AIChatProps) 
 
         <PromptInput onSubmit={handleSubmit} onValueChange={setInput} status={status} value={input}>
           <PromptInputBody>
-            <PromptInputTextarea disabled={!hasApiKey} placeholder="Ask about OpenSCAD..." />
+            <PromptInputTextarea placeholder="Ask about OpenSCAD..." />
           </PromptInputBody>
           <PromptInputFooter>
             <PromptInputTools>

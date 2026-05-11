@@ -9,6 +9,12 @@ export default defineConfig({
     },
   },
   plugins: [react()],
+  optimizeDeps: {
+    exclude: ["@dm.js@1.0.0"],
+  },
+  worker: {
+    format: "es",
+  },
   build: {
     target: "es2022",
     rollupOptions: {
@@ -19,6 +25,12 @@ export default defineConfig({
         },
         assetFileNames: "assets/[name].[hash][extname]",
       },
+    },
+  },
+  server: {
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp",
     },
   },
 });
