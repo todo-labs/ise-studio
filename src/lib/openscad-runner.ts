@@ -89,6 +89,12 @@ export function terminateOpenSCAD(): void {
   }
 }
 
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    terminateOpenSCAD();
+  });
+}
+
 export interface CompileResult {
   geometry: Uint8Array | null;
   stdout: string;
@@ -111,11 +117,11 @@ export async function compileOpenSCAD(
   const exportFlag = format === "stl" ? "binstl" : "off";
 
   const args = [
-    `/${fileName}`,
+    `--backend=manifold`,
+    `--export-format=${exportFlag}`,
     "-o",
     `/${outputFile}`,
-    "--backend=manifold",
-    `--export-format=${exportFlag}`,
+    `/${fileName}`,
   ];
 
   if (options.preview) {
@@ -154,10 +160,11 @@ export interface SyntaxError {
 }
 
 export async function checkSyntax(code: string): Promise<SyntaxCheckResult> {
+  const checkFile = "/input.ast";
   const result = await runOpenSCAD({
     inputs: [{ path: "/input.scad", content: `$preview=true;\n${code}` }],
-    args: ["/input.scad", "--export-format=param", "-o", "/dev/null"],
-    outputPaths: [],
+    args: ["-o", checkFile, "/input.scad"],
+    outputPaths: [checkFile],
   });
 
   const errors: SyntaxError[] = [];
