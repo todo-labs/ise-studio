@@ -8,6 +8,10 @@ import type { CompileResult } from "@/lib/openscad-runner";
 import { Eye, Square, Play, AlertCircle, Loader2, Download, FileCode } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+import { ExportModal } from "./export-modal";
+
+import { toast } from "sonner";
+
 interface PreviewPanelProps {
   code: string;
   fileName: string;
@@ -23,6 +27,7 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
   const [showWireframe, setShowWireframe] = useState(false);
   const [lastCompiledAt, setLastCompiledAt] = useState<Date | null>(null);
   const [isWasmReady, setIsWasmReady] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -98,32 +103,12 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
     };
   }, [code, autoPreview, handleCompile]);
 
-  const handleExportSTL = async () => {
+  const handleExportSTL = () => {
     if (!code.trim()) {
       setError("Nothing to export");
       return;
     }
-
-    try {
-      const result = await compileOpenSCAD(code, { format: "stl", fileName });
-      if (!result.geometry) {
-        setError("Export failed: no geometry produced");
-        return;
-      }
-
-      const blob = new Blob([result.geometry.buffer as ArrayBuffer], { type: "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      const downloadName = fileName.replace(/\.scad$/, "") + ".stl";
-      a.download = downloadName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Export failed");
-    }
+    setIsExportModalOpen(true);
   };
 
   const handleExportSCAD = () => {
@@ -132,16 +117,31 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
       return;
     }
 
-    const blob = new Blob([code], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const downloadName = fileName.endsWith(".scad") ? fileName : `${fileName}.scad`;
-    a.download = downloadName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      console.log("Starting SCAD export...");
+      const blob = new Blob([code], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const downloadName = fileName.endsWith(".scad") ? fileName : `${fileName}.scad`;
+      a.download = downloadName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      // Delay revocation to ensure browser has started the download
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        console.log("SCAD blob URL revoked");
+      }, 1000);
+      
+      toast.success("SCAD file exported successfully", {
+        description: `Saved as ${downloadName}`
+      });
+    } catch (err) {
+      console.error("SCAD export failed:", err);
+      toast.error("Failed to export SCAD file");
+    }
   };
 
   const handleError = useCallback((message: string) => {
@@ -150,6 +150,12 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
 
   return (
     <div className="bg-background flex h-full flex-col">
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        code={code}
+        fileName={fileName}
+      />
       <div className="bg-muted/30 flex items-center justify-between border-b p-2">
         <div className="flex items-center space-x-2">
           <Eye className="h-4 w-4" />
@@ -207,7 +213,7 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
               <TooltipTrigger asChild>
                 <Button
                   aria-label="Export .stl"
-                  disabled={!code.trim()}
+                  disabled={!code.trim() || isCompiling}
                   onClick={handleExportSTL}
                   size="icon"
                   variant="outline"

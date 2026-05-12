@@ -24,9 +24,10 @@ export interface OpenSCADInvocation {
 
 type ResolveFn = (result: OpenSCADResult) => void;
 type RejectFn = (error: Error) => void;
+export type ProgressCallback = (progress: number, status: string) => void;
 
 let isRunning = false;
-let requestQueue: { invocation: OpenSCADInvocation, resolve: ResolveFn, reject: RejectFn }[] = [];
+let requestQueue: { invocation: OpenSCADInvocation, resolve: ResolveFn, reject: RejectFn, onProgress?: ProgressCallback }[] = [];
 
 let activeWorker: Worker | null = null;
 
@@ -56,7 +57,17 @@ function processQueue() {
     const data = e.data;
     if (data.type === "stream") {
       if (data.stdout) stdoutChunks.push(data.stdout);
-      if (data.stderr) stderrChunks.push(data.stderr);
+      if (data.stderr) {
+        stderrChunks.push(data.stderr);
+        // Try to parse progress from stderr
+        // Format: "Rendering (20%)..." or "Compiling design (50%)..." or "Parsing design (100%)..."
+        const progressMatch = data.stderr.match(/(Rendering|Compiling design|Parsing design)\s+\((\d+)%\)\.\.\./);
+        if (progressMatch && req.onProgress) {
+          const status = progressMatch[1];
+          const percent = parseInt(progressMatch[2], 10);
+          req.onProgress(percent, status);
+        }
+      }
     } else if (data.type === "result") {
       const result = data.result as Omit<OpenSCADResult, "outputs"> & { outputs: [string, Uint8Array][] };
       req.resolve({
@@ -80,9 +91,17 @@ function processQueue() {
   activeWorker.postMessage(req.invocation);
 }
 
-export function runOpenSCAD(invocation: OpenSCADInvocation): Promise<OpenSCADResult> {
+export function runOpenSCAD(
+  invocation: OpenSCADInvocation,
+  onProgress?: ProgressCallback,
+): Promise<OpenSCADResult> {
   return new Promise<OpenSCADResult>((resolve, reject) => {
-    requestQueue.push({ invocation, resolve, reject });
+    requestQueue.push({
+      invocation,
+      resolve,
+      reject,
+      onProgress,
+    });
     processQueue();
   });
 }
@@ -119,6 +138,7 @@ export async function compileOpenSCAD(
     format?: "stl" | "off";
     preview?: boolean;
     fileName?: string;
+    onProgress?: ProgressCallback;
   } = {},
 ): Promise<CompileResult> {
   const format = options.format ?? "stl";
@@ -138,11 +158,14 @@ export async function compileOpenSCAD(
     code = "$preview=true;\n" + code;
   }
 
-  const result = await runOpenSCAD({
-    inputs: [{ path: `/${fileName}`, content: code }],
-    args,
-    outputPaths: [`/${outputFile}`],
-  });
+  const result = await runOpenSCAD(
+    {
+      inputs: [{ path: `/${fileName}`, content: code }],
+      args,
+      outputPaths: [`/${outputFile}`],
+    },
+    options.onProgress,
+  );
 
   const geometryData = result.outputs.get(`/${outputFile}`) ?? null;
 
