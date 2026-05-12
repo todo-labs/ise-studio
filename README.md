@@ -53,7 +53,7 @@ Built with **Vite**, **React 19**, **TypeScript**, **Monaco Editor**, and **shad
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/ise-studio.git
+git clone https://github.com/todo-labs/ise-studio.git
 cd ise-studio
 ```
 
@@ -79,7 +79,7 @@ npm run dev
 
 1. Click **Settings** in the top right of the header
 2. Paste your OpenRouter API key
-3. Select a model (defaults to Claude 3.5 Sonnet)
+3. Select a model (defaults to OpenRouter AutoRouter)
 4. Start using AI-assisted coding!
 
 Your API key is stored securely in your browser's local storage and sent directly to OpenRouter—no backend server needed.
@@ -151,14 +151,10 @@ The AI assistant can chain these tools together to help you write, debug, and op
 
 ## Roadmap
 
-- [ ] File explorer with project management
-- [ ] Multi-file support with imports
-- [ ] Collaborative editing with Yjs
+- [x] File explorer with project management
+- [x] Multi-file support with imports
 - [x] Custom themes and editor configurations
 - [ ] Performance profiling and optimization tips
-- [ ] Community snippet library
-- [ ] Desktop app via Tauri
-- [ ] VS Code extension
 - [ ] GPU-accelerated preview for complex models
 
 ## Contributing

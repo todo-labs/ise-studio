@@ -18,6 +18,7 @@ test-results/
 *.pem
 .tmp
 .turbo
+.npm_cache
 
 # debug
 npm-debug.log*
