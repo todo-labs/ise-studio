@@ -2,6 +2,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { Experimental_Agent as ToolLoopAgent, jsonSchema, tool } from "ai";
 
 import { runLocalTool, type EditorSelection } from "@/lib/ai-tools";
+import { getOpenSCADLibraryContext } from "@/lib/openscad-library-manifest";
 
 export interface OpenRouterChatAgentContext {
   apiKey: string;
@@ -125,6 +126,7 @@ export function createOpenRouterChatAgent({
 function buildSystemPrompt(currentCode: string, selection: EditorSelection | null) {
   const sections = [
     "You are ISE Studio's assistant. Help users write, debug, and explain OpenSCAD-style DSL code. Keep answers practical and include code when it helps. Use validate_dsl for syntax problems, inspect_scene for preview or geometry issues, search_docs for DSL syntax and examples, apply_patch_to_selection to edit the active selection or the whole document when no selection is available, and openrouter:web_search for current external references when needed.",
+    getOpenSCADLibraryContext(),
   ];
 
   if (currentCode.trim()) {

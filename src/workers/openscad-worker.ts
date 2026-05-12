@@ -1,9 +1,10 @@
 import { ensureOpenSCADLibraries } from "@/lib/openscad-library-cache";
-import { OPENSCAD_LIBRARY_DEFINITIONS } from "@/lib/openscad-library-manifest";
+import { getOpenSCADLibrariesForSource } from "@/lib/openscad-library-manifest";
 
 let instance: any = null;
 let loading: Promise<any> | null = null;
-let librariesMounted: Promise<void> | null = null;
+const mountedLibraries = new Set<string>();
+const libraryMounts = new Map<string, Promise<void>>();
 
 async function loadOpenSCAD(): Promise<any> {
   if (instance) return instance;
@@ -32,8 +33,6 @@ async function loadOpenSCAD(): Promise<any> {
         },
       });
 
-      await mountLibraries(instance.FS);
-
       return instance;
     } catch (err) {
       loading = null;
@@ -46,17 +45,30 @@ async function loadOpenSCAD(): Promise<any> {
   return loading;
 }
 
-async function mountLibraries(fs: any) {
-  if (!librariesMounted) {
-    librariesMounted = (async () => {
-      await ensureOpenSCADLibraries(fs, OPENSCAD_LIBRARY_DEFINITIONS);
-    })().catch((error) => {
-      librariesMounted = null;
-      throw error;
-    });
-  }
+async function mountLibrariesForInputs(
+  fs: any,
+  inputs: { path: string; content: string }[],
+) {
+  const libraries = getOpenSCADLibrariesForSource(inputs.map((input) => input.content).join("\n"));
 
-  await librariesMounted;
+  for (const library of libraries) {
+    if (mountedLibraries.has(library.name)) continue;
+
+    let mount = libraryMounts.get(library.name);
+    if (!mount) {
+      mount = ensureOpenSCADLibraries(fs, [library])
+        .then(() => {
+          mountedLibraries.add(library.name);
+        })
+        .catch((error) => {
+          libraryMounts.delete(library.name);
+          throw error;
+        });
+      libraryMounts.set(library.name, mount);
+    }
+
+    await mount;
+  }
 }
 
 async function handleInvocation(invocation: {
@@ -68,6 +80,7 @@ async function handleInvocation(invocation: {
 
   try {
     const scad = await loadOpenSCAD();
+    await mountLibrariesForInputs(scad.FS, invocation.inputs);
 
     for (const input of invocation.inputs) {
       const dir = input.path.substring(0, input.path.lastIndexOf("/"));

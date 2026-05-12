@@ -1,5 +1,7 @@
 import type * as Monaco from "monaco-editor";
 
+import { OPENSCAD_LIBRARY_DEFINITIONS } from "@/lib/openscad-library-manifest";
+
 export function buildInstance(monacoInstance: typeof Monaco) {
   // Register the language
   monacoInstance.languages.register({ id: "openscad" });
@@ -210,6 +212,26 @@ export function buildInstance(monacoInstance: typeof Monaco) {
 
       return {
         suggestions: [
+          ...OPENSCAD_LIBRARY_DEFINITIONS.flatMap((library) =>
+            Object.keys(library.symlinks ?? { [library.name]: "." }).flatMap((alias) => [
+              {
+                label: `include <${alias}/...>`,
+                kind: monacoInstance.languages.CompletionItemKind.Reference,
+                insertText: `include <${alias}/\${1:file.scad}>`,
+                insertTextRules: monacoInstance.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: `Include a file from the bundled ${library.name} library`,
+                range,
+              },
+              {
+                label: `use <${alias}/...>`,
+                kind: monacoInstance.languages.CompletionItemKind.Reference,
+                insertText: `use <${alias}/\${1:file.scad}>`,
+                insertTextRules: monacoInstance.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: `Use modules and functions from the bundled ${library.name} library`,
+                range,
+              },
+            ]),
+          ),
           {
             label: "cube",
             kind: monacoInstance.languages.CompletionItemKind.Function,

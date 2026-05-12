@@ -1,5 +1,9 @@
 import { compileOpenSCAD, checkSyntax } from "@/lib/openscad-runner";
 import { searchOpenSCADDocs } from "@/lib/openscad-docs";
+import {
+  getOpenSCADLibraryAliases,
+  getOpenSCADLibraryContext,
+} from "@/lib/openscad-library-manifest";
 
 type ToolArguments = Record<string, unknown>;
 
@@ -193,9 +197,14 @@ async function searchDocs(args: ToolArguments) {
   const query = typeof args.query === "string" ? args.query.trim().toLowerCase() : "";
   const limit = clampNumber(args.limit, 1, 10) ?? 5;
   const scored = await searchOpenSCADDocs(query, limit);
+  const libraryAliases = getOpenSCADLibraryAliases();
 
   return {
     query,
+    bundledLibraries: {
+      context: getOpenSCADLibraryContext(),
+      aliases: libraryAliases,
+    },
     results: scored.map(({ score: _score, ...entry }) => entry),
   };
 }

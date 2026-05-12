@@ -69,7 +69,7 @@ function shouldKeepLibraryFile(relativePath: string, library: OpenSCADLibraryDef
   if (lower.includes("/tests/") || lower.startsWith("tests/")) return false;
 
   const baseName = lower.split("/").pop() ?? "";
-  if (baseName.startsWith("license") || baseName.startsWith("readme")) {
+  if (baseName.startsWith("copying") || baseName.startsWith("license") || baseName.startsWith("readme")) {
     return true;
   }
 
@@ -102,7 +102,17 @@ async function loadArchive(library: OpenSCADLibraryDefinition): Promise<StoredAr
   const cached = await readArchiveFromDb(library.name);
   if (cached) return cached;
 
-  const response = await fetch(library.archiveUrl);
+  let response: Response;
+  try {
+    response = await fetch(library.archiveUrl);
+  } catch (error) {
+    throw new Error(
+      `Failed to fetch ${library.name} archive from ${library.archiveUrl}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+
   if (!response.ok) {
     throw new Error(`Failed to fetch ${library.name} archive: ${response.status} ${response.statusText}`);
   }
