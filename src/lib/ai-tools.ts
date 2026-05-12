@@ -213,7 +213,7 @@ function applyPatchToSelection(args: ToolArguments, context: ToolContext) {
     return { applied: false, error: "No code available to patch." };
   }
 
-  if (!selection || !isValidRange(selection.range)) {
+  if (!selection || !isValidRange(selection.range) || !selection.text) {
     return {
       applied: true,
       scope: "document",

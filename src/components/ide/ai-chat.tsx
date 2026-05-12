@@ -162,30 +162,19 @@ export function AIChat({
 
                     if (part.type === "dynamic-tool" || isToolUIPart(part)) {
                       const toolName = getToolName(part);
-                      const title =
-                        part.state === "output-available"
-                          ? `Tool result: ${toolName}`
-                          : part.state === "output-error"
-                            ? `Tool error: ${toolName}`
-                            : `Tool call: ${toolName}`;
-                      const body =
-                        part.state === "output-available"
-                          ? part.output
-                          : part.state === "output-error"
-                            ? { errorText: part.errorText }
-                            : part.input;
 
                       return (
-                        <Message from="data" key={`${message.id}-${index}`}>
-                          <MessageContent className="bg-muted/60 border border-border/60">
-                            <div className="space-y-1">
-                              <div className="text-muted-foreground text-xs font-medium">{title}</div>
-                              <pre className="text-muted-foreground max-h-56 overflow-auto whitespace-pre-wrap break-words text-xs">
-                                {JSON.stringify(body, null, 2)}
-                              </pre>
-                            </div>
-                          </MessageContent>
-                        </Message>
+                        <div key={`${message.id}-${index}`} className="my-1.5 flex w-fit items-center gap-2 rounded-md border border-border/50 bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground shadow-sm">
+                          <Bot className="size-3.5 opacity-70" />
+                          <span className="font-mono">{toolName}</span>
+                          {part.state === "call" ? (
+                            <span className="animate-pulse">...</span>
+                          ) : part.state === "output-error" ? (
+                            <span className="text-destructive font-medium">Failed</span>
+                          ) : (
+                            <span className="text-emerald-500 font-medium">✓</span>
+                          )}
+                        </div>
                       );
                     }
 
