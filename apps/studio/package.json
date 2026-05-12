@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ise-studio/core": "workspace:*",
     "@ise-studio/ui": "workspace:*",
     "monaco-editor": "^0.55.1",
     "three-stdlib": "^2.36.1"

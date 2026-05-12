@@ -30,13 +30,13 @@ import {
   OPENROUTER_PROVIDER,
   saveAISettings,
   saveSelectedModel,
-} from "@/lib/ai-settings";
+} from "@ise-studio/core/ai";
 import {
   DEFAULT_EDITOR_SETTINGS,
   loadEditorSettings,
   saveEditorSettings,
   type EditorSettings,
-} from "@/lib/editor-settings";
+} from "@ise-studio/core/editor";
 import { DEFAULT_DARK_PRESET_ID, THEME_PRESETS, type ThemePresetId } from "@ise-studio/ui/theme";
 
 export function SettingsModal() {

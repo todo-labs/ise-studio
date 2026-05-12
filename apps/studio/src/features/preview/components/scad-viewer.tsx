@@ -5,7 +5,7 @@ import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 import { useThemeMode } from "@ise-studio/ui/theme-provider";
-import { parseOFF, parseBinarySTL } from "@/lib/off-parser";
+import { parseOFF, parseBinarySTL } from "@ise-studio/core/geometry";
 
 interface SCADViewerProps {
   data: Uint8Array | null;

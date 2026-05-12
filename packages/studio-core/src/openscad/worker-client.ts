@@ -37,7 +37,7 @@ function processQueue() {
 
   const req = requestQueue.shift()!;
 
-  activeWorker = new Worker(new URL("../../workers/openscad-worker.ts", import.meta.url), {
+  activeWorker = new Worker(new URL("./worker.ts", import.meta.url), {
     type: "module",
   });
 

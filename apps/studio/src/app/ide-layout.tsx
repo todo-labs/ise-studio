@@ -7,8 +7,8 @@ import { AIChat } from "@/features/ai-assistant";
 import { CodeEditor } from "@/features/editor";
 import { FileExplorer } from "@/features/project-explorer";
 import { PreviewPanel } from "@/features/preview";
-import type { EditorSelection } from "@/lib/ai-tools";
-import type { ProjectMutation } from "@/lib/project";
+import type { EditorSelection } from "@ise-studio/core/ai";
+import type { ProjectMutation } from "@ise-studio/core/project";
 
 export function IDELayout() {
   const workspace = useStudioWorkspace();

@@ -1,6 +1,6 @@
 import { unzipSync } from "fflate";
 
-import type { OpenSCADLibraryDefinition } from "@/lib/openscad-library-manifest";
+import type { OpenSCADLibraryDefinition } from "./openscad-library-manifest";
 
 const DB_NAME = "ise-studio-openscad-libraries";
 const DB_VERSION = 1;

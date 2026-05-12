@@ -3,15 +3,15 @@ import { Button } from "@ise-studio/ui/button";
 import { Toggle } from "@ise-studio/ui/toggle";
 import { Separator } from "@ise-studio/ui/separator";
 import { SCADViewer } from "./scad-viewer";
-import { compileOpenSCADProject, terminateOpenSCAD } from "@/lib/openscad-runner";
-import type { CompileResult } from "@/lib/openscad-runner";
+import { compileOpenSCADProject, terminateOpenSCAD } from "@ise-studio/core/openscad";
+import type { CompileResult } from "@ise-studio/core/openscad";
 import { Eye, Square, Play, AlertCircle, Loader2, Download, FileCode } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@ise-studio/ui/tooltip";
 
 import { ExportModal } from "./export-modal";
 
 import { toast } from "sonner";
-import type { ProjectFile, ProjectTextFile } from "@/lib/project";
+import type { ProjectFile, ProjectTextFile } from "@ise-studio/core/project";
 
 interface PreviewPanelProps {
   files: ProjectFile[];

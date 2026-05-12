@@ -1,5 +1,5 @@
-import { ensureOpenSCADLibraries } from "@/lib/openscad-library-cache";
-import { getOpenSCADLibrariesForSource } from "@/lib/openscad-library-manifest";
+import { ensureOpenSCADLibraries } from "./openscad-library-cache";
+import { getOpenSCADLibrariesForSource } from "./openscad-library-manifest";
 
 let instance: any = null;
 let loading: Promise<any> | null = null;

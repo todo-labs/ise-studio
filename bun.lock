@@ -78,6 +78,7 @@
       "name": "@ise-studio/studio",
       "version": "0.1.0",
       "dependencies": {
+        "@ise-studio/core": "workspace:*",
         "@ise-studio/ui": "workspace:*",
         "monaco-editor": "^0.55.1",
         "three-stdlib": "^2.36.1",
@@ -86,6 +87,15 @@
     "packages/studio-core": {
       "name": "@ise-studio/core",
       "version": "0.1.0",
+      "dependencies": {
+        "@openrouter/ai-sdk-provider": "^2.9.0",
+        "ai": "^6.0.177",
+        "fflate": "^0.8.2",
+        "lucide-react": "^1.14.0",
+        "monaco-editor": "^0.55.1",
+        "three": "^0.178.0",
+        "three-stdlib": "^2.36.1",
+      },
     },
     "packages/studio-ui": {
       "name": "@ise-studio/ui",

@@ -38,9 +38,9 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "@ise-studio/ui/ai-elements/prompt-input";
-import { createOpenRouterChatAgent } from "@/lib/openrouter-chat-agent";
-import type { EditorSelection } from "@/lib/ai-tools";
-import type { BrowserProject, ProjectMutation } from "@/lib/project";
+import { createOpenRouterChatAgent } from "@ise-studio/core/ai";
+import type { EditorSelection } from "@ise-studio/core/ai";
+import type { BrowserProject, ProjectMutation } from "@ise-studio/core/project";
 import {
   AI_SETTINGS_EVENT,
   loadAISettings,
@@ -48,7 +48,7 @@ import {
   OPENROUTER_PROVIDER,
   saveSelectedModel,
   type AISettings,
-} from "@/lib/ai-settings";
+} from "@ise-studio/core/ai";
 import { cn } from "@ise-studio/ui/utils";
 
 interface AIChatProps {
