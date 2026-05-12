@@ -129,7 +129,7 @@ export async function runLocalTool(toolName: string, rawArgs: string, context: T
     case "inspect_scene":
       return JSON.stringify(await inspectScene(args, context), null, 2);
     case "search_docs":
-      return JSON.stringify(searchDocs(args), null, 2);
+      return JSON.stringify(await searchDocs(args), null, 2);
     case "apply_patch_to_selection":
       return JSON.stringify(applyPatchToSelection(args, context), null, 2);
     default:
