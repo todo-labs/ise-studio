@@ -19,15 +19,15 @@ import {
   MenubarMenu,
   MenubarSeparator,
   MenubarTrigger,
-} from "@/components/ui/menubar";
+} from "@ise-studio/ui/menubar";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+} from "@ise-studio/ui/select";
+import { Separator } from "@ise-studio/ui/separator";
 import {
   ASSET_EXTENSIONS,
   type BrowserProject,

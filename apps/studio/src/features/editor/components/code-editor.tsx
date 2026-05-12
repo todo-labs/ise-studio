@@ -3,7 +3,7 @@ import Editor from "@monaco-editor/react";
 import type { Selection } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
 
-import { useThemeMode } from "@/components/theme/theme-provider";
+import { useThemeMode } from "@ise-studio/ui/theme-provider";
 
 import type { EditorSelection } from "@/lib/ai-tools";
 import {
@@ -12,7 +12,7 @@ import {
   type EditorSettings,
 } from "@/lib/editor-settings";
 import { buildInstance } from "@/lib/openscad-monaco";
-import { THEME_PRESETS } from "@/lib/theme";
+import { THEME_PRESETS } from "@ise-studio/ui/theme";
 
 interface CodeEditorProps {
   code: string;

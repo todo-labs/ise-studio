@@ -4,7 +4,7 @@ import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
-import { useThemeMode } from "@/components/theme/theme-provider";
+import { useThemeMode } from "@ise-studio/ui/theme-provider";
 import { parseOFF, parseBinarySTL } from "@/lib/off-parser";
 
 interface SCADViewerProps {

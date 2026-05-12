@@ -1,5 +1,5 @@
 import { IDELayout } from "@/app/ide-layout";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@ise-studio/ui/sonner";
 
 function App() {
   return (

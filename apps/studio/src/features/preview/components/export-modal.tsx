@@ -7,8 +7,8 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogAction,
-} from "@/components/ui/alert-dialog";
-import { Progress } from "@/components/ui/progress";
+} from "@ise-studio/ui/alert-dialog";
+import { Progress } from "@ise-studio/ui/progress";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { compileOpenSCADProject } from "@/lib/openscad-runner";
 import type { ProjectFile } from "@/lib/project";

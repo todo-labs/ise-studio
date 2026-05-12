@@ -3,8 +3,8 @@
 import * as React from "react";
 import { Streamdown } from "streamdown";
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from "../../components/ui/button";
+import { cn } from "../../lib/utils";
 
 type MessageRole = "user" | "assistant" | "system" | "data";
 

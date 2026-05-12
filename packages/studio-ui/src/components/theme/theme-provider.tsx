@@ -9,7 +9,7 @@ import {
   type ThemeMode,
   type ThemePreset,
   type ThemePresetId,
-} from "@/lib/theme";
+} from "../../lib/theme";
 
 interface ThemeContextValue {
   theme: ThemeMode;

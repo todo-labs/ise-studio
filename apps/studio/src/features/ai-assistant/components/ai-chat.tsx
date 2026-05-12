@@ -13,21 +13,21 @@ import {
   ConversationContent,
   ConversationEmptyState,
   ConversationScrollButton,
-} from "@/components/ai-elements/conversation";
+} from "@ise-studio/ui/ai-elements/conversation";
 import {
   Message,
   MessageAction,
   MessageActions,
   MessageContent,
   MessageResponse,
-} from "@/components/ai-elements/message";
+} from "@ise-studio/ui/ai-elements/message";
 import {
   ModelSelector,
   ModelSelectorContent,
   ModelSelectorItem,
   ModelSelectorTrigger,
   ModelSelectorValue,
-} from "@/components/ai-elements/model-selector";
+} from "@ise-studio/ui/ai-elements/model-selector";
 import {
   PromptInput,
   PromptInputBody,
@@ -37,7 +37,7 @@ import {
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputTools,
-} from "@/components/ai-elements/prompt-input";
+} from "@ise-studio/ui/ai-elements/prompt-input";
 import { createOpenRouterChatAgent } from "@/lib/openrouter-chat-agent";
 import type { EditorSelection } from "@/lib/ai-tools";
 import type { BrowserProject, ProjectMutation } from "@/lib/project";
@@ -49,7 +49,7 @@ import {
   saveSelectedModel,
   type AISettings,
 } from "@/lib/ai-settings";
-import { cn } from "@/lib/utils";
+import { cn } from "@ise-studio/ui/utils";
 
 interface AIChatProps {
   isOpen: boolean;

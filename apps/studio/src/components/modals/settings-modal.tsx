@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Settings, AlertCircle } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@ise-studio/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -9,21 +9,21 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
+} from "@ise-studio/ui/dialog";
+import { Input } from "@ise-studio/ui/input";
+import { Label } from "@ise-studio/ui/label";
+import { Badge } from "@ise-studio/ui/badge";
+import { Slider } from "@ise-studio/ui/slider";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Toggle } from "@/components/ui/toggle";
-import { useThemeMode } from "@/components/theme/theme-provider";
+} from "@ise-studio/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ise-studio/ui/tabs";
+import { Toggle } from "@ise-studio/ui/toggle";
+import { useThemeMode } from "@ise-studio/ui/theme-provider";
 import {
   clearAISettings,
   loadAISettings,
@@ -37,7 +37,7 @@ import {
   saveEditorSettings,
   type EditorSettings,
 } from "@/lib/editor-settings";
-import { DEFAULT_DARK_PRESET_ID, THEME_PRESETS, type ThemePresetId } from "@/lib/theme";
+import { DEFAULT_DARK_PRESET_ID, THEME_PRESETS, type ThemePresetId } from "@ise-studio/ui/theme";
 
 export function SettingsModal() {
   const [apiKey, setApiKey] = useState("");

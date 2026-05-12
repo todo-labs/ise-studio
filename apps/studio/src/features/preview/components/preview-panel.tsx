@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Toggle } from "@/components/ui/toggle";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@ise-studio/ui/button";
+import { Toggle } from "@ise-studio/ui/toggle";
+import { Separator } from "@ise-studio/ui/separator";
 import { SCADViewer } from "./scad-viewer";
 import { compileOpenSCADProject, terminateOpenSCAD } from "@/lib/openscad-runner";
 import type { CompileResult } from "@/lib/openscad-runner";
 import { Eye, Square, Play, AlertCircle, Loader2, Download, FileCode } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@ise-studio/ui/tooltip";
 
 import { ExportModal } from "./export-modal";
 

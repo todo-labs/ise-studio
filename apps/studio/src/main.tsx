@@ -2,8 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./styles/globals.css";
-import { ThemeProvider } from "@/components/theme/theme-provider";
-import { applyTheme, getInitialTheme } from "@/lib/theme";
+import { ThemeProvider } from "@ise-studio/ui/theme-provider";
+import { applyTheme, getInitialTheme } from "@ise-studio/ui/theme";
 
 applyTheme(getInitialTheme());
 

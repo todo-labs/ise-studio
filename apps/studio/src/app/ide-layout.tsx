@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { FileCode, Loader2 } from "lucide-react";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@ise-studio/ui/resizable";
 import { IDEHeader } from "./components/ide-header";
 import { useStudioWorkspace } from "./use-studio-workspace";
 import { AIChat } from "@/features/ai-assistant";
