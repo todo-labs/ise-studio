@@ -3,6 +3,7 @@
 
 @source "../../index.html";
 @source "../**/*.{js,ts,jsx,tsx}";
+@source "../../../../packages/studio-ui/src/**/*.{js,ts,jsx,tsx}";
 @source "../../node_modules/streamdown/dist/*.js";
 
 @custom-variant dark (&:is(.dark *));
