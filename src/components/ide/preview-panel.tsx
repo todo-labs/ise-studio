@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
 import { SCADViewer } from "./scad-viewer";
-import { compileOpenSCAD, terminateOpenSCAD } from "@/lib/openscad-runner";
+import { compileOpenSCADProject, terminateOpenSCAD } from "@/lib/openscad-runner";
 import type { CompileResult } from "@/lib/openscad-runner";
 import { Eye, Square, Play, AlertCircle, Loader2, Download, FileCode } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -11,15 +11,23 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ExportModal } from "./export-modal";
 
 import { toast } from "sonner";
+import type { ProjectFile, ProjectTextFile } from "@/lib/project";
 
 interface PreviewPanelProps {
-  code: string;
+  files: ProjectFile[];
+  entryPath: string | null;
   fileName: string;
   onCompileReady?: (compileFunction: () => void) => void;
   autoPreview?: boolean;
 }
 
-export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = true }: PreviewPanelProps) {
+export function PreviewPanel({
+  files,
+  entryPath,
+  fileName,
+  onCompileReady,
+  autoPreview = true,
+}: PreviewPanelProps) {
   const [isCompiling, setIsCompiling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [geometryData, setGeometryData] = useState<Uint8Array | null>(null);
@@ -37,8 +45,9 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
   }, []);
 
   const handleCompile = useCallback(async () => {
-    if (!code.trim()) {
-      setError("No code to compile");
+    const entryFile = getEntryTextFile(files, entryPath);
+    if (!entryFile || !entryFile.content.trim()) {
+      setError("Select a .scad file to compile");
       setGeometryData(null);
       return;
     }
@@ -47,10 +56,14 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
     setError(null);
 
     try {
-      const result: CompileResult = await compileOpenSCAD(code, {
+      const result: CompileResult = await compileOpenSCADProject({
+        files: files.map((file) => ({
+          path: file.path,
+          content: file.content,
+        })),
+        entryPath: entryFile.path,
         format: "off",
         preview: true,
-        fileName,
       });
 
       if (result.exitCode !== 0 && !result.geometry) {
@@ -76,7 +89,7 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
     } finally {
       setIsCompiling(false);
     }
-  }, [code, fileName]);
+  }, [entryPath, files]);
 
   useEffect(() => {
     if (!onCompileReady) return;
@@ -86,7 +99,8 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
   }, [handleCompile, onCompileReady]);
 
   useEffect(() => {
-    if (!autoPreview || !code.trim()) return;
+    const entryFile = getEntryTextFile(files, entryPath);
+    if (!autoPreview || !entryFile?.content.trim()) return;
 
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
@@ -101,10 +115,11 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
         clearTimeout(debounceRef.current);
       }
     };
-  }, [code, autoPreview, handleCompile]);
+  }, [entryPath, files, autoPreview, handleCompile]);
 
   const handleExportSTL = () => {
-    if (!code.trim()) {
+    const entryFile = getEntryTextFile(files, entryPath);
+    if (!entryFile?.content.trim()) {
       setError("Nothing to export");
       return;
     }
@@ -112,14 +127,15 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
   };
 
   const handleExportSCAD = () => {
-    if (!code.trim()) {
+    const entryFile = getEntryTextFile(files, entryPath);
+    if (!entryFile?.content.trim()) {
       setError("Nothing to export");
       return;
     }
 
     try {
       console.log("Starting SCAD export...");
-      const blob = new Blob([code], { type: "text/plain" });
+      const blob = new Blob([entryFile.content], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -153,7 +169,8 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
       <ExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
-        code={code}
+        files={files}
+        entryPath={entryPath}
         fileName={fileName}
       />
       <div className="bg-muted/30 flex items-center justify-between border-b p-2">
@@ -179,7 +196,7 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
               <TooltipTrigger asChild>
                 <Button
                   aria-label={isCompiling ? "Rendering..." : "Render (F5)"}
-                  disabled={isCompiling || !code.trim()}
+                  disabled={isCompiling || !entryPath}
                   onClick={handleCompile}
                   size="icon"
                   variant="default"
@@ -196,7 +213,7 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
               <TooltipTrigger asChild>
                 <Button
                   aria-label="Export .scad"
-                  disabled={!code.trim()}
+                  disabled={!entryPath}
                   onClick={handleExportSCAD}
                   size="icon"
                   variant="outline"
@@ -213,7 +230,7 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
               <TooltipTrigger asChild>
                 <Button
                   aria-label="Export .stl"
-                  disabled={!code.trim() || isCompiling}
+                  disabled={!entryPath || isCompiling}
                   onClick={handleExportSTL}
                   size="icon"
                   variant="outline"
@@ -239,21 +256,15 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
       )}
 
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {!code.trim() ? (
+        {!entryPath ? (
           <div className="text-muted-foreground flex h-full flex-col items-center justify-center">
             <div className="space-y-4 text-center">
               <div className="bg-muted mx-auto flex h-16 w-16 items-center justify-center rounded-full">
                 <Eye className="h-8 w-8" />
               </div>
               <div>
-                <h3 className="text-foreground mb-2 text-lg font-medium">No Preview Available</h3>
-                <p className="mb-4 text-sm">Write some OpenSCAD code to see the preview</p>
-                <div className="text-muted-foreground text-xs">
-                  Try:{" "}
-                  <code className="bg-muted rounded px-1">
-                    {"cube([20, 20, 20], center=true);"}
-                  </code>
-                </div>
+                <h3 className="text-foreground mb-2 text-lg font-medium">No .scad File Selected</h3>
+                <p className="mb-4 text-sm">Select or create an OpenSCAD file to render the project.</p>
               </div>
             </div>
           </div>
@@ -307,4 +318,9 @@ export function PreviewPanel({ code, fileName, onCompileReady, autoPreview = tru
       </div>
     </div>
   );
+}
+
+function getEntryTextFile(files: ProjectFile[], entryPath: string | null): ProjectTextFile | null {
+  const file = files.find((item) => item.path === entryPath);
+  return file?.kind === "scad" ? file : null;
 }

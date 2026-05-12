@@ -10,16 +10,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
-import { compileOpenSCAD } from "@/lib/openscad-runner";
+import { compileOpenSCADProject } from "@/lib/openscad-runner";
+import type { ProjectFile } from "@/lib/project";
 
 interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  code: string;
+  files: ProjectFile[];
+  entryPath: string | null;
   fileName: string;
 }
 
-export function ExportModal({ isOpen, onClose, code, fileName }: ExportModalProps) {
+export function ExportModal({ isOpen, onClose, files, entryPath, fileName }: ExportModalProps) {
   const [status, setStatus] = useState<"idle" | "exporting" | "saving" | "completed" | "error">("idle");
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState("Preparing export...");
@@ -37,9 +39,18 @@ export function ExportModal({ isOpen, onClose, code, fileName }: ExportModalProp
     setStatusText("Rendering STL...");
 
     try {
-      const result = await compileOpenSCAD(code, {
+      const entryFile = files.find((file) => file.path === entryPath && file.kind === "scad");
+      if (!entryFile) {
+        throw new Error("Select a .scad file before exporting STL.");
+      }
+
+      const result = await compileOpenSCADProject({
+        files: files.map((file) => ({
+          path: file.path,
+          content: file.content,
+        })),
+        entryPath: entryFile.path,
         format: "stl",
-        fileName,
         onProgress: (percent, status) => {
           setProgress(percent);
           setStatusText(`${status} (${percent}%)...`);

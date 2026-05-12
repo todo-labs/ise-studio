@@ -40,6 +40,7 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import { createOpenRouterChatAgent } from "@/lib/openrouter-chat-agent";
 import type { EditorSelection } from "@/lib/ai-tools";
+import type { BrowserProject, ProjectMutation } from "@/lib/project";
 import {
   AI_SETTINGS_EVENT,
   loadAISettings,
@@ -53,17 +54,17 @@ import { cn } from "@/lib/utils";
 interface AIChatProps {
   isOpen: boolean;
   onClose: () => void;
-  currentCode?: string;
+  project: BrowserProject;
   currentSelection?: EditorSelection | null;
-  onCodeChange: (code: string) => void;
+  onProjectMutation: (mutation: ProjectMutation) => void;
 }
 
 export function AIChat({
   isOpen,
   onClose: _onClose,
-  currentCode,
+  project,
   currentSelection,
-  onCodeChange,
+  onProjectMutation,
 }: AIChatProps) {
   const [input, setInput] = useState("");
   const [settings, setSettings] = useState<AISettings>(() =>
@@ -72,7 +73,7 @@ export function AIChat({
       : loadAISettings(),
   );
   const [useWebSearch, setUseWebSearch] = useState(false);
-  const codeRef = useRef(currentCode ?? "");
+  const projectRef = useRef(project);
   const selectionRef = useRef<EditorSelection | null>(currentSelection ?? null);
 
   useEffect(() => {
@@ -82,8 +83,8 @@ export function AIChat({
   }, []);
 
   useEffect(() => {
-    codeRef.current = currentCode ?? "";
-  }, [currentCode]);
+    projectRef.current = project;
+  }, [project]);
 
   useEffect(() => {
     selectionRef.current = currentSelection ?? null;
@@ -96,11 +97,11 @@ export function AIChat({
       apiKey: settings.apiKey,
       model: settings.model,
       useWebSearch,
-      getCurrentCode: () => codeRef.current,
+      getCurrentProject: () => projectRef.current,
       getCurrentSelection: () => selectionRef.current,
-      onCodeUpdate: onCodeChange,
+      onProjectMutation,
     });
-  }, [onCodeChange, settings.apiKey, settings.model, useWebSearch]);
+  }, [onProjectMutation, settings.apiKey, settings.model, useWebSearch]);
 
   const transport = useMemo(() => {
     if (!agent) return null;
@@ -180,7 +181,7 @@ export function AIChat({
                         <div key={`${message.id}-${index}`} className="my-1.5 flex w-fit items-center gap-2 rounded-md border border-border/50 bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground shadow-sm">
                           <Bot className="size-3.5 opacity-70" />
                           <span className="font-mono">{toolName}</span>
-                          {part.state === "call" ? (
+                          {part.state === "input-streaming" ? (
                             <span className="animate-pulse">...</span>
                           ) : part.state === "output-error" ? (
                             <span className="text-destructive font-medium">Failed</span>

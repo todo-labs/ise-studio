@@ -16,6 +16,7 @@ import { THEME_PRESETS } from "@/lib/theme";
 
 interface CodeEditorProps {
   code: string;
+  filePath: string;
   onCodeChange: (content: string) => void;
   onSelectionChange?: (selection: EditorSelection | null) => void;
 }
@@ -54,7 +55,7 @@ function registerEditorThemes(monacoInstance: typeof Monaco) {
   });
 }
 
-export function CodeEditor({ code, onCodeChange, onSelectionChange }: CodeEditorProps) {
+export function CodeEditor({ code, filePath, onCodeChange, onSelectionChange }: CodeEditorProps) {
   const editorRef = useRef<unknown>(null);
   const selectionDisposableRef = useRef<{ dispose: () => void } | null>(null);
   const { preset } = useThemeMode();
@@ -137,6 +138,7 @@ export function CodeEditor({ code, onCodeChange, onSelectionChange }: CodeEditor
         <Editor
           height="100%"
           language="openscad"
+          path={filePath}
           value={code}
           onChange={(value) => {
             if (value !== undefined) {

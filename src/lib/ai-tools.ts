@@ -1,9 +1,11 @@
-import { compileOpenSCAD, checkSyntax } from "@/lib/openscad-runner";
+import { checkSyntax, compileOpenSCADProject, type CompileProjectFile } from "@/lib/openscad-runner";
 import { searchOpenSCADDocs } from "@/lib/openscad-docs";
 import {
   getOpenSCADLibraryAliases,
   getOpenSCADLibraryContext,
 } from "@/lib/openscad-library-manifest";
+import type { BrowserProject, ProjectTextFile } from "@/lib/project";
+import { getActiveTextFile } from "@/lib/project";
 
 type ToolArguments = Record<string, unknown>;
 
@@ -35,6 +37,7 @@ type ToolDefinition = {
 
 interface ToolContext {
   currentCode?: string;
+  project?: BrowserProject;
   selection?: EditorSelection | null;
 }
 
@@ -142,13 +145,13 @@ export async function runLocalTool(toolName: string, rawArgs: string, context: T
 }
 
 async function validateDsl(args: ToolArguments, context: ToolContext) {
-  const code = getRequestedCode(args, context);
+  const { code, entryPath, files } = getRequestedProjectSource(args, context);
   if (!code.trim()) {
     return { valid: false, error: "No code available to validate." };
   }
 
   try {
-    const result = await checkSyntax(code);
+    const result = await checkSyntax(code, { files, entryPath });
     return {
       valid: result.valid,
       errors: result.errors.length > 0 ? result.errors : null,
@@ -163,13 +166,18 @@ async function validateDsl(args: ToolArguments, context: ToolContext) {
 }
 
 async function inspectScene(args: ToolArguments, context: ToolContext) {
-  const code = getRequestedCode(args, context);
+  const { code, entryPath, files } = getRequestedProjectSource(args, context);
   if (!code.trim()) {
     return { valid: false, error: "No code available to inspect." };
   }
 
   try {
-    const result = await compileOpenSCAD(code, { format: "off", preview: true });
+    const result = await compileOpenSCADProject({
+      files,
+      entryPath,
+      format: "off",
+      preview: true,
+    });
     if (result.exitCode !== 0 || !result.geometry) {
       return {
         valid: false,
@@ -242,6 +250,47 @@ function applyPatchToSelection(args: ToolArguments, context: ToolContext) {
 
 function getRequestedCode(args: ToolArguments, context: ToolContext) {
   return typeof args.code === "string" && args.code.trim() ? args.code : context.currentCode ?? "";
+}
+
+function getRequestedProjectSource(
+  args: ToolArguments,
+  context: ToolContext,
+): { code: string; entryPath: string; files: CompileProjectFile[] } {
+  const requestedPath = typeof args.path === "string" ? args.path : null;
+  const providedCode = typeof args.code === "string" ? args.code : null;
+  const project = context.project;
+
+  if (!project) {
+    const code = getRequestedCode(args, context);
+    return {
+      code,
+      entryPath: "input.scad",
+      files: [{ path: "input.scad", content: code }],
+    };
+  }
+
+  const entryFile = getRequestedTextFile(project, requestedPath);
+  if (!entryFile) {
+    return { code: "", entryPath: requestedPath ?? project.activeFilePath, files: [] };
+  }
+
+  const files = project.files.map((file) => ({
+    path: file.path,
+    content: file.path === entryFile.path && providedCode != null ? providedCode : file.content,
+  }));
+
+  return {
+    code: providedCode ?? entryFile.content,
+    entryPath: entryFile.path,
+    files,
+  };
+}
+
+function getRequestedTextFile(project: BrowserProject, requestedPath: string | null): ProjectTextFile | null {
+  const file = requestedPath
+    ? project.files.find((item) => item.path === requestedPath)
+    : getActiveTextFile(project);
+  return file?.kind === "scad" ? file : null;
 }
 
 function parseToolArguments(rawArgs: string): ToolArguments {
