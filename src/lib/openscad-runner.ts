@@ -1,6 +1,6 @@
 export interface OpenSCADSource {
   path: string;
-  content: string;
+  content: string | Uint8Array | ArrayBuffer | Blob;
 }
 
 export interface ProcessStreams {
@@ -132,35 +132,44 @@ export interface CompileResult {
   format: "stl" | "off";
 }
 
-export async function compileOpenSCAD(
-  code: string,
-  options: {
-    format?: "stl" | "off";
-    preview?: boolean;
-    fileName?: string;
-    onProgress?: ProgressCallback;
-  } = {},
-): Promise<CompileResult> {
+export interface CompileProjectFile {
+  path: string;
+  content: string | Uint8Array | ArrayBuffer | Blob;
+}
+
+export async function compileOpenSCADProject(options: {
+  files: CompileProjectFile[];
+  entryPath: string;
+  format?: "stl" | "off";
+  preview?: boolean;
+  onProgress?: ProgressCallback;
+}): Promise<CompileResult> {
   const format = options.format ?? "stl";
-  const fileName = options.fileName ?? "input.scad";
   const outputFile = format === "stl" ? "output.stl" : "output.off";
   const exportFlag = format === "stl" ? "binstl" : "off";
+  const entryPath = normalizeRunnerPath(options.entryPath);
+
+  const inputs = options.files.map((file) => {
+    const inputPath = normalizeRunnerPath(file.path);
+    const shouldInjectPreview =
+      options.preview && inputPath === entryPath && typeof file.content === "string";
+    return {
+      path: inputPath,
+      content: shouldInjectPreview ? `$preview=true;\n${file.content}` : file.content,
+    };
+  });
 
   const args = [
     `--backend=manifold`,
     `--export-format=${exportFlag}`,
     "-o",
     `/${outputFile}`,
-    `/${fileName}`,
+    entryPath,
   ];
-
-  if (options.preview) {
-    code = "$preview=true;\n" + code;
-  }
 
   const result = await runOpenSCAD(
     {
-      inputs: [{ path: `/${fileName}`, content: code }],
+      inputs,
       args,
       outputPaths: [`/${outputFile}`],
     },
@@ -178,6 +187,27 @@ export async function compileOpenSCAD(
   };
 }
 
+export async function compileOpenSCAD(
+  code: string,
+  options: {
+    format?: "stl" | "off";
+    preview?: boolean;
+    fileName?: string;
+    onProgress?: ProgressCallback;
+  } = {},
+): Promise<CompileResult> {
+  const format = options.format ?? "stl";
+  const fileName = options.fileName ?? "input.scad";
+
+  return compileOpenSCADProject({
+    files: [{ path: fileName, content: code }],
+    entryPath: fileName,
+    format,
+    preview: options.preview,
+    onProgress: options.onProgress,
+  });
+}
+
 export interface SyntaxCheckResult {
   valid: boolean;
   errors: SyntaxError[];
@@ -192,11 +222,25 @@ export interface SyntaxError {
   severity: "error" | "warning";
 }
 
-export async function checkSyntax(code: string): Promise<SyntaxCheckResult> {
+export async function checkSyntax(
+  code: string,
+  options: { files?: CompileProjectFile[]; entryPath?: string } = {},
+): Promise<SyntaxCheckResult> {
   const checkFile = "/input.ast";
+  const entryPath = normalizeRunnerPath(options.entryPath ?? "input.scad");
+  const files = options.files?.length
+    ? options.files.map((file) => ({
+        path: normalizeRunnerPath(file.path),
+        content:
+          normalizeRunnerPath(file.path) === entryPath && typeof file.content === "string"
+            ? `$preview=true;\n${file.content}`
+            : file.content,
+      }))
+    : [{ path: "/input.scad", content: `$preview=true;\n${code}` }];
+
   const result = await runOpenSCAD({
-    inputs: [{ path: "/input.scad", content: `$preview=true;\n${code}` }],
-    args: ["-o", checkFile, "/input.scad"],
+    inputs: files,
+    args: ["-o", checkFile, entryPath],
     outputPaths: [checkFile],
   });
 
@@ -223,4 +267,8 @@ export async function checkSyntax(code: string): Promise<SyntaxCheckResult> {
     stdout: result.stdout,
     stderr: result.stderr,
   };
+}
+
+function normalizeRunnerPath(path: string) {
+  return path.startsWith("/") ? path : `/${path}`;
 }

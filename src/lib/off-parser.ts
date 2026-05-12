@@ -98,9 +98,9 @@ export function parseOFF(text: string): OFFMesh {
 
     let colorIdx = 0;
     for (let i = 0; i < indexList.length; i += 3) {
-      const r = faceColorList[colorIdx++];
-      const g = faceColorList[colorIdx++];
-      const b = faceColorList[colorIdx++];
+      const r = faceColorList[colorIdx++] ?? 0.8;
+      const g = faceColorList[colorIdx++] ?? 0.8;
+      const b = faceColorList[colorIdx++] ?? 0.8;
 
       for (let v = 0; v < 3; v++) {
         const outV = i + v;

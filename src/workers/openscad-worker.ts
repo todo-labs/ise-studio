@@ -47,9 +47,14 @@ async function loadOpenSCAD(): Promise<any> {
 
 async function mountLibrariesForInputs(
   fs: any,
-  inputs: { path: string; content: string }[],
+  inputs: { path: string; content: string | Uint8Array | ArrayBuffer | Blob }[],
 ) {
-  const libraries = getOpenSCADLibrariesForSource(inputs.map((input) => input.content).join("\n"));
+  const libraries = getOpenSCADLibrariesForSource(
+    inputs
+      .filter((input): input is { path: string; content: string } => typeof input.content === "string")
+      .map((input) => input.content)
+      .join("\n"),
+  );
 
   for (const library of libraries) {
     if (mountedLibraries.has(library.name)) continue;
@@ -72,7 +77,7 @@ async function mountLibrariesForInputs(
 }
 
 async function handleInvocation(invocation: {
-  inputs: { path: string; content: string }[];
+  inputs: { path: string; content: string | Uint8Array | ArrayBuffer | Blob }[];
   args: string[];
   outputPaths: string[];
 }): Promise<void> {
@@ -89,7 +94,7 @@ async function handleInvocation(invocation: {
           scad.FS.mkdirTree(dir);
         } catch {}
       }
-      scad.FS.writeFile(input.path, new TextEncoder().encode(input.content));
+      scad.FS.writeFile(input.path, await toBytes(input.content));
     }
 
     scad.FS.chdir("/");
@@ -134,6 +139,13 @@ async function handleInvocation(invocation: {
       error: err instanceof Error ? err.message : String(err),
     });
   }
+}
+
+async function toBytes(content: string | Uint8Array | ArrayBuffer | Blob) {
+  if (typeof content === "string") return new TextEncoder().encode(content);
+  if (content instanceof Uint8Array) return content;
+  if (content instanceof ArrayBuffer) return new Uint8Array(content);
+  return new Uint8Array(await content.arrayBuffer());
 }
 
 self.onmessage = (e: MessageEvent) => {
