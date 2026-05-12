@@ -1,0 +1,13 @@
+{
+  "name": "@ise-studio/openscad",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ISE Studio OpenSCAD execution helpers",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2"
+  }
+}

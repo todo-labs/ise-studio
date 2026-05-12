@@ -1,11 +1,10 @@
-import { checkSyntax, compileOpenSCADProject, type CompileProjectFile } from "../openscad";
-import { searchOpenSCADDocs } from "../openscad/openscad-docs";
+import { checkSyntax, compileOpenSCADProject, searchOpenSCADDocs, type CompileProjectFile } from "@ise-studio/openscad";
 import {
   getOpenSCADLibraryAliases,
   getOpenSCADLibraryContext,
-} from "../openscad/openscad-library-manifest";
-import type { BrowserProject, ProjectTextFile } from "../project";
-import { getActiveTextFile } from "../project";
+} from "@ise-studio/openscad";
+import type { BrowserProject, ProjectTextFile } from "@ise-studio/project";
+import { getActiveTextFile } from "@ise-studio/project";
 
 type ToolArguments = Record<string, unknown>;
 

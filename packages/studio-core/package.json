@@ -2,22 +2,5 @@
   "name": "@ise-studio/core",
   "version": "0.1.0",
   "private": true,
-  "description": "ISE Studio shared core logic",
-  "type": "module",
-  "exports": {
-    "./ai": "./src/ai/index.ts",
-    "./editor": "./src/editor/index.ts",
-    "./geometry": "./src/geometry/index.ts",
-    "./openscad": "./src/openscad/index.ts",
-    "./project": "./src/project/index.ts"
-  },
-  "dependencies": {
-    "@openrouter/ai-sdk-provider": "^2.9.0",
-    "ai": "^6.0.177",
-    "fflate": "^0.8.2",
-    "lucide-react": "^1.14.0",
-    "monaco-editor": "^0.55.1",
-    "three": "^0.178.0",
-    "three-stdlib": "^2.36.1"
-  }
+  "description": "Deprecated compatibility package retained during modularization"
 }

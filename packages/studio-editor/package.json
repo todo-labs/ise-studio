@@ -1,0 +1,14 @@
+{
+  "name": "@ise-studio/editor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ISE Studio editor settings and Monaco configuration",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ise-studio/openscad": "workspace:*",
+    "monaco-editor": "^0.55.1"
+  }
+}

@@ -36,7 +36,7 @@ import {
   ensureUniquePath,
   getFileExtension,
   normalizeProjectPath,
-} from "@ise-studio/core/project";
+} from "@ise-studio/project";
 
 interface FileExplorerProps {
   projects: BrowserProject[];

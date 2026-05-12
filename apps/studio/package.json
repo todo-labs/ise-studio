@@ -16,7 +16,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ise-studio/core": "workspace:*",
+    "@ise-studio/ai": "workspace:*",
+    "@ise-studio/editor": "workspace:*",
+    "@ise-studio/geometry": "workspace:*",
+    "@ise-studio/openscad": "workspace:*",
+    "@ise-studio/project": "workspace:*",
     "@ise-studio/ui": "workspace:*",
     "monaco-editor": "^0.55.1",
     "three-stdlib": "^2.36.1"

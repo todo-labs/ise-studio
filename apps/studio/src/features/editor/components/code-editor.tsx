@@ -5,13 +5,13 @@ import type * as Monaco from "monaco-editor";
 
 import { useThemeMode } from "@ise-studio/ui/theme-provider";
 
-import type { EditorSelection } from "@ise-studio/core/ai";
+import type { EditorSelection } from "@ise-studio/ai";
 import {
   EDITOR_SETTINGS_EVENT,
   loadEditorSettings,
   type EditorSettings,
-} from "@ise-studio/core/editor";
-import { buildInstance } from "@ise-studio/core/editor";
+} from "@ise-studio/editor";
+import { buildInstance } from "@ise-studio/editor";
 import { THEME_PRESETS } from "@ise-studio/ui/theme";
 
 interface CodeEditorProps {

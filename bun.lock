@@ -78,24 +78,57 @@
       "name": "@ise-studio/studio",
       "version": "0.1.0",
       "dependencies": {
-        "@ise-studio/core": "workspace:*",
+        "@ise-studio/ai": "workspace:*",
+        "@ise-studio/editor": "workspace:*",
+        "@ise-studio/geometry": "workspace:*",
+        "@ise-studio/openscad": "workspace:*",
+        "@ise-studio/project": "workspace:*",
         "@ise-studio/ui": "workspace:*",
         "monaco-editor": "^0.55.1",
         "three-stdlib": "^2.36.1",
       },
     },
+    "packages/studio-ai": {
+      "name": "@ise-studio/ai",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ise-studio/openscad": "workspace:*",
+        "@ise-studio/project": "workspace:*",
+        "@openrouter/ai-sdk-provider": "^2.9.0",
+        "ai": "^6.0.177",
+        "lucide-react": "^1.14.0",
+      },
+    },
     "packages/studio-core": {
       "name": "@ise-studio/core",
       "version": "0.1.0",
+    },
+    "packages/studio-editor": {
+      "name": "@ise-studio/editor",
+      "version": "0.1.0",
       "dependencies": {
-        "@openrouter/ai-sdk-provider": "^2.9.0",
-        "ai": "^6.0.177",
-        "fflate": "^0.8.2",
-        "lucide-react": "^1.14.0",
+        "@ise-studio/openscad": "workspace:*",
         "monaco-editor": "^0.55.1",
+      },
+    },
+    "packages/studio-geometry": {
+      "name": "@ise-studio/geometry",
+      "version": "0.1.0",
+      "dependencies": {
         "three": "^0.178.0",
         "three-stdlib": "^2.36.1",
       },
+    },
+    "packages/studio-openscad": {
+      "name": "@ise-studio/openscad",
+      "version": "0.1.0",
+      "dependencies": {
+        "fflate": "^0.8.2",
+      },
+    },
+    "packages/studio-project": {
+      "name": "@ise-studio/project",
+      "version": "0.1.0",
     },
     "packages/studio-ui": {
       "name": "@ise-studio/ui",
@@ -225,7 +258,17 @@
 
     "@iconify/utils": ["@iconify/utils@3.1.3", "", { "dependencies": { "@antfu/install-pkg": "^1.1.0", "@iconify/types": "^2.0.0", "import-meta-resolve": "^4.2.0" } }, "sha512-LPKOXPn/zV+zis1oOfGWogaXVpqUybF3ZS6SCZIsz8vg0ivVp9+fVqyYB7xq0aiST/VhUQYGO1qo6uoYSiEJqw=="],
 
+    "@ise-studio/ai": ["@ise-studio/ai@workspace:packages/studio-ai"],
+
     "@ise-studio/core": ["@ise-studio/core@workspace:packages/studio-core"],
+
+    "@ise-studio/editor": ["@ise-studio/editor@workspace:packages/studio-editor"],
+
+    "@ise-studio/geometry": ["@ise-studio/geometry@workspace:packages/studio-geometry"],
+
+    "@ise-studio/openscad": ["@ise-studio/openscad@workspace:packages/studio-openscad"],
+
+    "@ise-studio/project": ["@ise-studio/project@workspace:packages/studio-project"],
 
     "@ise-studio/studio": ["@ise-studio/studio@workspace:apps/studio"],
 

@@ -1,6 +1,6 @@
 import type * as Monaco from "monaco-editor";
 
-import { OPENSCAD_LIBRARY_DEFINITIONS } from "../openscad/openscad-library-manifest";
+import { OPENSCAD_LIBRARY_DEFINITIONS } from "@ise-studio/openscad";
 
 export function buildInstance(monacoInstance: typeof Monaco) {
   // Register the language

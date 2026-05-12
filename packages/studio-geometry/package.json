@@ -1,0 +1,14 @@
+{
+  "name": "@ise-studio/geometry",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ISE Studio geometry helpers",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "three": "^0.178.0",
+    "three-stdlib": "^2.36.1"
+  }
+}

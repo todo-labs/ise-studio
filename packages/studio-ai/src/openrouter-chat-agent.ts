@@ -2,14 +2,14 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { Experimental_Agent as ToolLoopAgent, jsonSchema, tool } from "ai";
 
 import { runLocalTool, type EditorSelection } from "./ai-tools";
-import { getOpenSCADLibraryContext } from "../openscad/openscad-library-manifest";
+import { getOpenSCADLibraryContext } from "@ise-studio/openscad";
 import {
   type BrowserProject,
   type ProjectMutation,
   getActiveTextFile,
   getProjectFileKind,
   normalizeProjectPath,
-} from "../project";
+} from "@ise-studio/project";
 
 export interface OpenRouterChatAgentContext {
   apiKey: string;

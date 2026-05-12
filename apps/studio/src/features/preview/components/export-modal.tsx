@@ -10,8 +10,8 @@ import {
 } from "@ise-studio/ui/alert-dialog";
 import { Progress } from "@ise-studio/ui/progress";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
-import { compileOpenSCADProject } from "@ise-studio/core/openscad";
-import type { ProjectFile } from "@ise-studio/core/project";
+import { compileOpenSCADProject } from "@ise-studio/openscad";
+import type { ProjectFile } from "@ise-studio/project";
 
 interface ExportModalProps {
   isOpen: boolean;

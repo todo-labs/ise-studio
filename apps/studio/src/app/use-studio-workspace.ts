@@ -9,7 +9,7 @@ import {
   saveProject,
   type BrowserProject,
   type ProjectMutation,
-} from "@ise-studio/core/project";
+} from "@ise-studio/project";
 
 export function useStudioWorkspace() {
   const [projects, setProjects] = useState<BrowserProject[]>([]);
