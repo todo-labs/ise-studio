@@ -20,6 +20,7 @@ async function loadOpenSCAD(): Promise<any> {
 
       instance = await OpenSCADFactory({
         noInitialRun: true,
+        noExitRuntime: true,
         print: (text: string) => {
           if (text) postMessage({ type: "stream", stdout: text });
         },

@@ -25,68 +25,78 @@ export interface OpenSCADInvocation {
 type ResolveFn = (result: OpenSCADResult) => void;
 type RejectFn = (error: Error) => void;
 
-let worker: Worker | null = null;
-let pendingResolve: ResolveFn | null = null;
-let pendingReject: RejectFn | null = null;
-let stdoutChunks: string[] = [];
-let stderrChunks: string[] = [];
+let isRunning = false;
+let requestQueue: { invocation: OpenSCADInvocation, resolve: ResolveFn, reject: RejectFn }[] = [];
 
-function getWorker(): Worker {
-  if (worker) return worker;
-  worker = new Worker(new URL("../workers/openscad-worker.ts", import.meta.url), {
+let activeWorker: Worker | null = null;
+
+function processQueue() {
+  if (isRunning || requestQueue.length === 0) return;
+  isRunning = true;
+  
+  const req = requestQueue.shift()!;
+  
+  activeWorker = new Worker(new URL("../workers/openscad-worker.ts", import.meta.url), {
     type: "module",
   });
-  worker.onmessage = (e: MessageEvent) => {
+  
+  const stdoutChunks: string[] = [];
+  const stderrChunks: string[] = [];
+  
+  const cleanup = () => {
+    if (activeWorker) {
+      activeWorker.terminate();
+      activeWorker = null;
+    }
+    isRunning = false;
+    processQueue();
+  };
+  
+  activeWorker.onmessage = (e: MessageEvent) => {
     const data = e.data;
     if (data.type === "stream") {
       if (data.stdout) stdoutChunks.push(data.stdout);
       if (data.stderr) stderrChunks.push(data.stderr);
     } else if (data.type === "result") {
-      const resolve = pendingResolve;
-      pendingResolve = null;
-      pendingReject = null;
       const result = data.result as Omit<OpenSCADResult, "outputs"> & { outputs: [string, Uint8Array][] };
-      resolve?.({
+      req.resolve({
         ...result,
         outputs: new Map(result.outputs ?? []),
         stdout: stdoutChunks.join("\n"),
         stderr: stderrChunks.join("\n"),
       });
+      cleanup();
     } else if (data.type === "error") {
-      const reject = pendingReject;
-      pendingResolve = null;
-      pendingReject = null;
-      reject?.(new Error(data.error));
+      req.reject(new Error(data.error));
+      cleanup();
     }
   };
-  worker.onerror = (e: ErrorEvent) => {
-    const reject = pendingReject;
-    pendingResolve = null;
-    pendingReject = null;
-    reject?.(new Error(e.message || "Worker error"));
+  
+  activeWorker.onerror = (e: ErrorEvent) => {
+    req.reject(new Error(e.message || "Worker error"));
+    cleanup();
   };
-  return worker;
+  
+  activeWorker.postMessage(req.invocation);
 }
 
 export function runOpenSCAD(invocation: OpenSCADInvocation): Promise<OpenSCADResult> {
-  const w = getWorker();
-  stdoutChunks = [];
-  stderrChunks = [];
-
   return new Promise<OpenSCADResult>((resolve, reject) => {
-    pendingResolve = resolve;
-    pendingReject = reject;
-    w.postMessage(invocation);
+    requestQueue.push({ invocation, resolve, reject });
+    processQueue();
   });
 }
 
 export function terminateOpenSCAD(): void {
-  if (worker) {
-    worker.terminate();
-    worker = null;
-    pendingResolve = null;
-    pendingReject = null;
+  if (activeWorker) {
+    activeWorker.terminate();
+    activeWorker = null;
   }
+  isRunning = false;
+  for (const req of requestQueue) {
+    req.reject(new Error("Worker terminated"));
+  }
+  requestQueue = [];
 }
 
 if (import.meta.hot) {

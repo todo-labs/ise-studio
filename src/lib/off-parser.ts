@@ -14,25 +14,21 @@ export function parseOFF(text: string): OFFMesh {
     .filter((l) => l.length > 0 && !l.startsWith("#"));
 
   let lineIdx = 0;
-
-  const headerLine = lines[lineIdx]!;
-  if (headerLine.startsWith("OFF")) {
-    const rest = headerLine.slice(3).trim();
-    if (rest.length === 0) lineIdx++;
-  } else {
+  if (!lines[lineIdx]?.startsWith("OFF")) {
     throw new Error("Not an OFF file");
   }
 
-  const countLine = lineIdx < lines.length ? lines[lineIdx]! : "0 0 0";
-  if (lineIdx < lines.length && !lines[lineIdx]!.startsWith("OFF") && lines[lineIdx] === countLine) {
-    lineIdx++;
-  } else if (lineIdx > 0 && headerLine.slice(3).trim().length === 0) {
+  let countStr = lines[lineIdx]!.slice(3).trim();
+  lineIdx++;
+
+  if (countStr.length === 0 && lineIdx < lines.length) {
+    countStr = lines[lineIdx]!;
     lineIdx++;
   }
 
-  const counts = countLine.split(/\s+/).map(Number);
-  const numVertices = Math.max(counts[0] ?? 0, 0);
-  const numFaces = Math.max(counts[1] ?? 0, 0);
+  const counts = countStr.split(/\s+/).map(Number);
+  const numVertices = Math.max(counts[0] ?? 0, 0) || 0;
+  const numFaces = Math.max(counts[1] ?? 0, 0) || 0;
 
   if (numVertices === 0) {
     return {
@@ -80,27 +76,68 @@ export function parseOFF(text: string): OFFMesh {
       indexList.push(v0, parts[1 + j] ?? 0, parts[2 + j] ?? 0);
     }
 
+    let r = 0.8, g = 0.8, b = 0.8;
     if (parts.length > 1 + n + 2) {
       hasFaceColors = true;
-      const r = (parts[1 + n] ?? 0) / 255;
-      const g = (parts[2 + n] ?? 0) / 255;
-      const b = (parts[3 + n] ?? 0) / 255;
-      const tris = n - 2;
-      for (let t = 0; t < tris; t++) {
-        faceColorList.push(r, g, b);
-      }
+      r = (parts[1 + n] ?? 0) / 255;
+      g = (parts[2 + n] ?? 0) / 255;
+      b = (parts[3 + n] ?? 0) / 255;
+    }
+    const tris = n - 2;
+    for (let t = 0; t < tris; t++) {
+      faceColorList.push(r, g, b);
     }
   }
 
   const indices = new Uint32Array(indexList);
-  const normals = computeNormals(vertices, indices);
 
-  const colors =
-    faceColorList.length > 0 && hasFaceColors
-      ? new Float32Array(faceColorList)
-      : vertexColors;
+  if (hasFaceColors) {
+    const flatVertices = new Float32Array(indexList.length * 3);
+    const flatColors = new Float32Array(indexList.length * 3);
+    const flatIndices = new Uint32Array(indexList.length);
 
-  return { vertices, normals, indices, colors, numVertices, numFaces };
+    let colorIdx = 0;
+    for (let i = 0; i < indexList.length; i += 3) {
+      const r = faceColorList[colorIdx++];
+      const g = faceColorList[colorIdx++];
+      const b = faceColorList[colorIdx++];
+
+      for (let v = 0; v < 3; v++) {
+        const outV = i + v;
+        const vIdx = indexList[outV]!;
+        flatVertices[outV * 3] = vertices[vIdx * 3]!;
+        flatVertices[outV * 3 + 1] = vertices[vIdx * 3 + 1]!;
+        flatVertices[outV * 3 + 2] = vertices[vIdx * 3 + 2]!;
+
+        flatIndices[outV] = outV;
+
+        flatColors[outV * 3] = r;
+        flatColors[outV * 3 + 1] = g;
+        flatColors[outV * 3 + 2] = b;
+      }
+    }
+
+    const normals = computeNormals(flatVertices, flatIndices);
+
+    return {
+      vertices: flatVertices,
+      normals,
+      indices: flatIndices,
+      colors: flatColors,
+      numVertices: flatVertices.length / 3,
+      numFaces: flatIndices.length / 3,
+    };
+  } else {
+    const normals = computeNormals(vertices, indices);
+    return {
+      vertices,
+      normals,
+      indices,
+      colors: vertexColors,
+      numVertices,
+      numFaces,
+    };
+  }
 }
 
 function computeNormals(vertices: Float32Array, indices: Uint32Array): Float32Array {
