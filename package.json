@@ -4,16 +4,25 @@
   "private": true,
   "description": "ISE Studio - An open-source, web-based IDE for OpenSCAD with AI-powered assistance",
   "type": "module",
+  "packageManager": "bun@1.3.6",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "build": "vite build",
-    "check": "oxlint && tsc --noEmit",
-    "dev": "vite",
-    "format:check": "oxfmt --check .",
-    "format:write": "oxfmt .",
-    "lint": "oxlint",
-    "lint:fix": "oxlint --fix",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "build": "cd apps/studio && bun run build",
+    "check": "cd apps/studio && bun run check",
+    "dev": "cd apps/studio && bun run dev",
+    "format:check": "cd apps/studio && bun run format:check",
+    "format:write": "cd apps/studio && bun run format:write",
+    "lint": "cd apps/studio && bun run lint",
+    "lint:fix": "cd apps/studio && bun run lint:fix",
+    "preview": "cd apps/studio && bun run preview",
+    "typecheck": "cd apps/studio && bun run typecheck",
+    "workspaces:build": "turbo run build",
+    "workspaces:dev": "turbo run dev",
+    "workspaces:lint": "turbo run lint",
+    "workspaces:typecheck": "turbo run typecheck"
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.179",
@@ -79,6 +88,7 @@
     "oxlint": "^1.63.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.0.15",
+    "turbo": "^2.9.12",
     "tw-animate-css": "^1.3.4",
     "typescript": "^5.8.2",
     "vite": "^7.2.4"

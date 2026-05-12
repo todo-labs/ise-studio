@@ -1,0 +1,22 @@
+{
+  "name": "@ise-studio/studio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ISE Studio app package",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "check": "oxlint && tsc --noEmit",
+    "dev": "vite",
+    "format:check": "oxfmt --check .",
+    "format:write": "oxfmt .",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "monaco-editor": "^0.55.1",
+    "three-stdlib": "^2.36.1"
+  }
+}
