@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Streamdown } from "streamdown";
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type MessageRole = "user" | "assistant" | "system" | "data";
@@ -44,4 +45,32 @@ function MessageResponse({ children, className }: { children: string; className?
   );
 }
 
-export { Message, MessageContent, MessageResponse };
+function MessageActions({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function MessageAction({
+  className,
+  variant = "ghost",
+  size = "icon",
+  ...props
+}: React.ComponentProps<typeof Button>) {
+  return (
+    <Button
+      className={cn("size-7 text-muted-foreground hover:text-foreground", className)}
+      size={size}
+      variant={variant}
+      {...props}
+    />
+  );
+}
+
+export { Message, MessageContent, MessageResponse, MessageActions, MessageAction };

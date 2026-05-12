@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, GlobeIcon } from "lucide-react";
+import { Bot, CheckIcon, CopyIcon, GlobeIcon } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import {
   DirectChatTransport,
@@ -14,7 +14,13 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
-import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
+import {
+  Message,
+  MessageAction,
+  MessageActions,
+  MessageContent,
+  MessageResponse,
+} from "@/components/ai-elements/message";
 import {
   ModelSelector,
   ModelSelectorContent,
@@ -152,11 +158,18 @@ export function AIChat({
                   </MessageContent>
                 </Message>
               ) : (
-                <div className="space-y-3 px-1 text-sm leading-6">
+                <div className="group space-y-3 px-1 text-sm leading-6">
                   {message.parts.map((part, index) => {
                     if (isTextUIPart(part)) {
                       return (
-                        <MessageResponse key={`${message.id}-${index}`}>{part.text}</MessageResponse>
+                        <div key={`${message.id}-${index}`} className="space-y-2">
+                          <MessageResponse>{part.text}</MessageResponse>
+                          {index === message.parts.length - 1 && (
+                            <MessageActions>
+                              <CopyButton text={part.text} />
+                            </MessageActions>
+                          )}
+                        </div>
                       );
                     }
 
@@ -232,5 +245,20 @@ export function AIChat({
         </PromptInput>
       </div>
     </div>
+  );
+}
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <MessageAction onClick={handleCopy} title="Copy message">
+      {copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
+    </MessageAction>
   );
 }
