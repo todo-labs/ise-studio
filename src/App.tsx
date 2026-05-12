@@ -1,4 +1,4 @@
-import { IDELayout } from "./components/ide/ide-layout";
+import { IDELayout } from "@/app/ide-layout";
 import { Toaster } from "@/components/ui/sonner";
 
 function App() {

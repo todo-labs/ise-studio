@@ -17,7 +17,6 @@ interface PreviewPanelProps {
   files: ProjectFile[];
   entryPath: string | null;
   fileName: string;
-  onCompileReady?: (compileFunction: () => void) => void;
   autoPreview?: boolean;
 }
 
@@ -25,7 +24,6 @@ export function PreviewPanel({
   files,
   entryPath,
   fileName,
-  onCompileReady,
   autoPreview = true,
 }: PreviewPanelProps) {
   const [isCompiling, setIsCompiling] = useState(false);
@@ -90,13 +88,6 @@ export function PreviewPanel({
       setIsCompiling(false);
     }
   }, [entryPath, files]);
-
-  useEffect(() => {
-    if (!onCompileReady) return;
-    onCompileReady(() => {
-      handleCompile();
-    });
-  }, [handleCompile, onCompileReady]);
 
   useEffect(() => {
     const entryFile = getEntryTextFile(files, entryPath);
