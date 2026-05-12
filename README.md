@@ -2,6 +2,8 @@
 
 An open-source, browser-based IDE for OpenSCAD with AI-powered coding assistance. Write, compile, and preview 3D models directly in your browser using the official OpenSCAD compiler via WebAssembly.
 
+![ISE Studio Screenshot](public/screenshot.png)
+
 Built with **Vite**, **React 19**, **TypeScript**, **Monaco Editor**, and **shadcn/ui**.
 
 ## Features
