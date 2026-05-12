@@ -154,7 +154,7 @@ The AI assistant can chain these tools together to help you write, debug, and op
 - [ ] File explorer with project management
 - [ ] Multi-file support with imports
 - [ ] Collaborative editing with Yjs
-- [ ] Custom themes and editor configurations
+- [x] Custom themes and editor configurations
 - [ ] Performance profiling and optimization tips
 - [ ] Community snippet library
 - [ ] Desktop app via Tauri
