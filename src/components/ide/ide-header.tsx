@@ -1,7 +1,6 @@
 import { Button, buttonVariants } from "@/components/ui/button";
-import { MessageSquare, MoonStar, SunMedium } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { SettingsModal } from "@/components/modals";
-import { useThemeMode } from "@/components/theme/theme-provider";
 
 interface IDEHeaderProps {
   isChatOpen: boolean;
@@ -9,8 +8,6 @@ interface IDEHeaderProps {
 }
 
 export function IDEHeader({ isChatOpen, onToggleChat }: IDEHeaderProps) {
-  const { theme, toggleTheme } = useThemeMode();
-
   return (
     <div className="bg-background/95 supports-[backdrop-filter]:bg-background/60 border-b backdrop-blur">
       <div className="flex h-14 items-center justify-between px-4">
@@ -33,15 +30,6 @@ export function IDEHeader({ isChatOpen, onToggleChat }: IDEHeaderProps) {
             title={`${isChatOpen ? "Hide" : "Show"} AI Chat (⌘⇧C)`}
           >
             <MessageSquare className="h-4 w-4" />
-          </Button>
-          <Button
-            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-            size="sm"
-            variant="ghost"
-            onClick={toggleTheme}
-            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          >
-            {theme === "dark" ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
           </Button>
           <a
             className={buttonVariants({ variant: "ghost", size: "sm" })}

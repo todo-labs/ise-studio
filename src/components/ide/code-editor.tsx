@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import type { Selection } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
@@ -6,7 +6,13 @@ import type * as Monaco from "monaco-editor";
 import { useThemeMode } from "@/components/theme/theme-provider";
 
 import type { EditorSelection } from "@/lib/ai-tools";
+import {
+  EDITOR_SETTINGS_EVENT,
+  loadEditorSettings,
+  type EditorSettings,
+} from "@/lib/editor-settings";
 import { buildInstance } from "@/lib/openscad-monaco";
+import { THEME_PRESETS } from "@/lib/theme";
 
 interface CodeEditorProps {
   code: string;
@@ -14,10 +20,45 @@ interface CodeEditorProps {
   onSelectionChange?: (selection: EditorSelection | null) => void;
 }
 
+function registerEditorThemes(monacoInstance: typeof Monaco) {
+  THEME_PRESETS.forEach((preset) => {
+    const syntax = preset.editor.syntax;
+    monacoInstance.editor.defineTheme(preset.monacoTheme, {
+      base: preset.mode === "dark" ? "vs-dark" : "vs",
+      inherit: true,
+      rules: [
+        { token: "keyword", foreground: syntax.keyword.replace("#", ""), fontStyle: "bold" },
+        { token: "number", foreground: syntax.primitive.replace("#", "") },
+        { token: "string", foreground: syntax.string.replace("#", "") },
+        { token: "comment", foreground: syntax.comment.replace("#", ""), fontStyle: "italic" },
+        { token: "type", foreground: syntax.type.replace("#", "") },
+        { token: "operator", foreground: syntax.operator.replace("#", "") },
+      ],
+      colors: {
+        "editor.background": preset.editor.background,
+        "editor.foreground": preset.editor.foreground,
+        "editor.lineHighlightBackground": preset.editor.lineHighlight,
+        "editorLineNumber.foreground": syntax.comment,
+        "editorCursor.foreground": preset.swatches.primary,
+        "editor.selectionBackground": preset.editor.selection,
+        "editor.inactiveSelectionBackground": preset.editor.lineHighlight,
+        "editorIndentGuide.background1": preset.editor.selection,
+        "editorIndentGuide.activeBackground1": preset.swatches.primary,
+        "editorSuggestWidget.background": preset.editor.lineHighlight,
+        "editorSuggestWidget.border": preset.editor.border,
+        "editorSuggestWidget.selectedBackground": preset.editor.selection,
+        "editorWidget.background": preset.editor.lineHighlight,
+        focusBorder: preset.swatches.primary,
+      },
+    });
+  });
+}
+
 export function CodeEditor({ code, onCodeChange, onSelectionChange }: CodeEditorProps) {
   const editorRef = useRef<unknown>(null);
   const selectionDisposableRef = useRef<{ dispose: () => void } | null>(null);
-  const { theme } = useThemeMode();
+  const { preset } = useThemeMode();
+  const [editorSettings, setEditorSettings] = useState<EditorSettings>(() => loadEditorSettings());
 
   const emitSelection = () => {
     const editor = editorRef.current as {
@@ -54,6 +95,7 @@ export function CodeEditor({ code, onCodeChange, onSelectionChange }: CodeEditor
     });
 
     buildInstance(monacoInstance);
+    registerEditorThemes(monacoInstance);
     emitSelection();
 
     try {
@@ -67,7 +109,15 @@ export function CodeEditor({ code, onCodeChange, onSelectionChange }: CodeEditor
   };
 
   useEffect(() => {
+    const handleEditorSettingsChange = (event: Event) => {
+      const nextSettings = (event as CustomEvent<EditorSettings>).detail;
+      setEditorSettings(nextSettings ?? loadEditorSettings());
+    };
+
+    window.addEventListener(EDITOR_SETTINGS_EVENT, handleEditorSettingsChange);
+
     return () => {
+      window.removeEventListener(EDITOR_SETTINGS_EVENT, handleEditorSettingsChange);
       selectionDisposableRef.current?.dispose();
       selectionDisposableRef.current = null;
     };
@@ -93,18 +143,21 @@ export function CodeEditor({ code, onCodeChange, onSelectionChange }: CodeEditor
               onCodeChange(value);
             }
           }}
+          beforeMount={registerEditorThemes}
           onMount={handleEditorDidMount}
-          theme={theme === "dark" ? "vs-dark" : "vs"}
+          theme={preset.monacoTheme}
           options={{
-            minimap: { enabled: false },
-            fontSize: 14,
-            lineNumbers: "on",
+            minimap: { enabled: editorSettings.minimap },
+            fontSize: editorSettings.fontSize,
+            lineNumbers: editorSettings.lineNumbers,
             roundedSelection: false,
             scrollBeyondLastLine: false,
             automaticLayout: true,
-            tabSize: 2,
-            insertSpaces: true,
-            wordWrap: "on",
+            tabSize: editorSettings.tabSize,
+            insertSpaces: editorSettings.insertSpaces,
+            wordWrap: editorSettings.wordWrap,
+            renderWhitespace: editorSettings.renderWhitespace,
+            smoothScrolling: editorSettings.smoothScrolling,
             suggest: {
               showKeywords: true,
               showSnippets: true,

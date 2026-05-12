@@ -1,30 +1,52 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { applyTheme, getInitialTheme, THEME_STORAGE_KEY, type ThemeMode } from "@/lib/theme";
+import {
+  applyThemePreset,
+  getPresetForMode,
+  getThemePreset,
+  loadAppearanceSettings,
+  saveAppearanceSettings,
+  type ThemeMode,
+  type ThemePreset,
+  type ThemePresetId,
+} from "@/lib/theme";
 
 interface ThemeContextValue {
   theme: ThemeMode;
+  preset: ThemePreset;
+  presetId: ThemePresetId;
   setTheme: (theme: ThemeMode) => void;
+  setPresetId: (presetId: ThemePresetId) => void;
   toggleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>(() => getInitialTheme());
+  const [presetId, setPresetId] = useState<ThemePresetId>(() => loadAppearanceSettings().presetId);
+  const preset = getThemePreset(presetId);
+  const theme = preset.mode;
 
   useEffect(() => {
-    applyTheme(theme);
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }, [theme]);
+    applyThemePreset(preset);
+    saveAppearanceSettings({ presetId });
+  }, [preset, presetId]);
 
   const value = useMemo<ThemeContextValue>(
     () => ({
       theme,
-      setTheme: setThemeState,
-      toggleTheme: () => setThemeState((current) => (current === "dark" ? "light" : "dark")),
+      preset,
+      presetId,
+      setTheme: (nextTheme) => setPresetId(getPresetForMode(nextTheme)),
+      setPresetId,
+      toggleTheme: () =>
+        setPresetId((currentPresetId) =>
+          getThemePreset(currentPresetId).mode === "dark"
+            ? getPresetForMode("light")
+            : getPresetForMode("dark"),
+        ),
     }),
-    [theme],
+    [preset, presetId, theme],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
