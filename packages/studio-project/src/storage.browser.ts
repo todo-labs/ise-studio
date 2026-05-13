@@ -12,6 +12,11 @@ const DB_VERSION = 1;
 const PROJECT_STORE = "projects";
 const ACTIVE_PROJECT_KEY = "ise-studio-active-project-id";
 
+export interface StoredProjects {
+  projects: BrowserProject[];
+  activeProjectId: string;
+}
+
 function openProjectDb(): Promise<IDBDatabase> {
   return new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -48,7 +53,7 @@ async function withStore<T>(
   }).finally(() => db.close());
 }
 
-export async function loadProjects(): Promise<{ projects: BrowserProject[]; activeProjectId: string }> {
+export async function loadProjects(): Promise<StoredProjects> {
   const stored = await withStore<BrowserProject[]>("readonly", (store) => store.getAll());
   const projects = (stored ?? []).map(normalizeLoadedProject).filter(Boolean) as BrowserProject[];
 
