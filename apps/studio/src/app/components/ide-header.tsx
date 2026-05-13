@@ -1,6 +1,6 @@
 import { Button, buttonVariants } from "@ise-studio/ui/button";
 import { MessageSquare } from "lucide-react";
-import { SettingsModal } from "@/components/modals";
+import { SettingsModal } from "@/features/settings";
 
 interface IDEHeaderProps {
   isChatOpen: boolean;

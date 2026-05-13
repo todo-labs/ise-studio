@@ -11,10 +11,10 @@
     "prefix": ""
   },
   "aliases": {
-    "components": "@/components",
-    "utils": "@/lib/utils",
-    "ui": "@/components/ui",
-    "lib": "@/lib",
+    "components": "../../packages/studio-ui/src/components",
+    "utils": "@ise-studio/ui/utils",
+    "ui": "../../packages/studio-ui/src/components/ui",
+    "lib": "../../packages/studio-ui/src/lib",
     "hooks": "@/hooks"
   },
   "iconLibrary": "lucide"
