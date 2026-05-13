@@ -10,49 +10,14 @@ import {
   EDITOR_SETTINGS_EVENT,
   loadEditorSettings,
   type EditorSettings,
+  installOpenSCADMonaco,
 } from "@ise-studio/editor";
-import { buildInstance } from "@ise-studio/editor";
-import { THEME_PRESETS } from "@ise-studio/ui/theme";
 
 interface CodeEditorProps {
   code: string;
   filePath: string;
   onCodeChange: (content: string) => void;
   onSelectionChange?: (selection: EditorSelection | null) => void;
-}
-
-function registerEditorThemes(monacoInstance: typeof Monaco) {
-  THEME_PRESETS.forEach((preset) => {
-    const syntax = preset.editor.syntax;
-    monacoInstance.editor.defineTheme(preset.monacoTheme, {
-      base: preset.mode === "dark" ? "vs-dark" : "vs",
-      inherit: true,
-      rules: [
-        { token: "keyword", foreground: syntax.keyword.replace("#", ""), fontStyle: "bold" },
-        { token: "number", foreground: syntax.primitive.replace("#", "") },
-        { token: "string", foreground: syntax.string.replace("#", "") },
-        { token: "comment", foreground: syntax.comment.replace("#", ""), fontStyle: "italic" },
-        { token: "type", foreground: syntax.type.replace("#", "") },
-        { token: "operator", foreground: syntax.operator.replace("#", "") },
-      ],
-      colors: {
-        "editor.background": preset.editor.background,
-        "editor.foreground": preset.editor.foreground,
-        "editor.lineHighlightBackground": preset.editor.lineHighlight,
-        "editorLineNumber.foreground": syntax.comment,
-        "editorCursor.foreground": preset.swatches.primary,
-        "editor.selectionBackground": preset.editor.selection,
-        "editor.inactiveSelectionBackground": preset.editor.lineHighlight,
-        "editorIndentGuide.background1": preset.editor.selection,
-        "editorIndentGuide.activeBackground1": preset.swatches.primary,
-        "editorSuggestWidget.background": preset.editor.lineHighlight,
-        "editorSuggestWidget.border": preset.editor.border,
-        "editorSuggestWidget.selectedBackground": preset.editor.selection,
-        "editorWidget.background": preset.editor.lineHighlight,
-        focusBorder: preset.swatches.primary,
-      },
-    });
-  });
 }
 
 export function CodeEditor({ code, filePath, onCodeChange, onSelectionChange }: CodeEditorProps) {
@@ -95,8 +60,7 @@ export function CodeEditor({ code, filePath, onCodeChange, onSelectionChange }: 
       emitSelection();
     });
 
-    buildInstance(monacoInstance);
-    registerEditorThemes(monacoInstance);
+    installOpenSCADMonaco(monacoInstance);
     emitSelection();
 
     try {
@@ -145,7 +109,7 @@ export function CodeEditor({ code, filePath, onCodeChange, onSelectionChange }: 
               onCodeChange(value);
             }
           }}
-          beforeMount={registerEditorThemes}
+          beforeMount={installOpenSCADMonaco}
           onMount={handleEditorDidMount}
           theme={preset.monacoTheme}
           options={{

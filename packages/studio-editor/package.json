@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@ise-studio/openscad": "workspace:*",
+    "@ise-studio/ui": "workspace:*",
     "monaco-editor": "^0.55.1"
   }
 }
