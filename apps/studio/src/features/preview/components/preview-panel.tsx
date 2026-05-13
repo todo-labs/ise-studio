@@ -1,17 +1,15 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useState } from "react";
+import { AlertCircle, Download, Eye, FileCode, Loader2, Play, Square } from "lucide-react";
+
 import { Button } from "@ise-studio/ui/button";
-import { Toggle } from "@ise-studio/ui/toggle";
 import { Separator } from "@ise-studio/ui/separator";
-import { SCADViewer } from "./scad-viewer";
-import { compileOpenSCADProject, terminateOpenSCAD } from "@ise-studio/openscad";
-import type { CompileResult } from "@ise-studio/openscad";
-import { Eye, Square, Play, AlertCircle, Loader2, Download, FileCode } from "lucide-react";
+import { Toggle } from "@ise-studio/ui/toggle";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@ise-studio/ui/tooltip";
+import type { ProjectFile } from "@ise-studio/project";
 
 import { ExportModal } from "./export-modal";
-
-import { toast } from "sonner";
-import type { ProjectFile, ProjectTextFile } from "@ise-studio/project";
+import { SCADViewer } from "./scad-viewer";
+import { usePreviewWorkflow } from "../preview-workflow";
 
 interface PreviewPanelProps {
   files: ProjectFile[];
@@ -26,143 +24,27 @@ export function PreviewPanel({
   fileName,
   autoPreview = true,
 }: PreviewPanelProps) {
-  const [isCompiling, setIsCompiling] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [geometryData, setGeometryData] = useState<Uint8Array | null>(null);
-  const [geometryFormat, setGeometryFormat] = useState<"stl" | "off">("stl");
-  const [showWireframe, setShowWireframe] = useState(false);
-  const [lastCompiledAt, setLastCompiledAt] = useState<Date | null>(null);
-  const [isWasmReady, setIsWasmReady] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      terminateOpenSCAD();
-    };
-  }, []);
-
-  const handleCompile = useCallback(async () => {
-    const entryFile = getEntryTextFile(files, entryPath);
-    if (!entryFile || !entryFile.content.trim()) {
-      setError("Select a .scad file to compile");
-      setGeometryData(null);
-      return;
-    }
-
-    setIsCompiling(true);
-    setError(null);
-
-    try {
-      const result: CompileResult = await compileOpenSCADProject({
-        files: files.map((file) => ({
-          path: file.path,
-          content: file.content,
-        })),
-        entryPath: entryFile.path,
-        format: "off",
-        preview: true,
-      });
-
-      if (result.exitCode !== 0 && !result.geometry) {
-        const errorText = result.stderr.trim() || `Compilation failed (exit code ${result.exitCode})`;
-        setError(errorText);
-        setGeometryData(null);
-        return;
-      }
-
-      if (!result.geometry) {
-        setError("No geometry produced");
-        setGeometryData(null);
-        return;
-      }
-
-      setGeometryData(result.geometry);
-      setGeometryFormat(result.format);
-      setLastCompiledAt(new Date());
-      setIsWasmReady(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Compilation failed");
-      setGeometryData(null);
-    } finally {
-      setIsCompiling(false);
-    }
-  }, [entryPath, files]);
-
-  useEffect(() => {
-    const entryFile = getEntryTextFile(files, entryPath);
-    if (!autoPreview || !entryFile?.content.trim()) return;
-
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    debounceRef.current = setTimeout(() => {
-      handleCompile();
-    }, 1500);
-
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, [entryPath, files, autoPreview, handleCompile]);
+  const preview = usePreviewWorkflow({ files, entryPath, fileName, autoPreview });
 
   const handleExportSTL = () => {
-    const entryFile = getEntryTextFile(files, entryPath);
-    if (!entryFile?.content.trim()) {
-      setError("Nothing to export");
+    if (!preview.canExport) {
+      preview.setError("Nothing to export");
       return;
     }
     setIsExportModalOpen(true);
   };
 
-  const handleExportSCAD = () => {
-    const entryFile = getEntryTextFile(files, entryPath);
-    if (!entryFile?.content.trim()) {
-      setError("Nothing to export");
-      return;
-    }
-
-    try {
-      console.log("Starting SCAD export...");
-      const blob = new Blob([entryFile.content], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      const downloadName = fileName.endsWith(".scad") ? fileName : `${fileName}.scad`;
-      a.download = downloadName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      
-      // Delay revocation to ensure browser has started the download
-      setTimeout(() => {
-        URL.revokeObjectURL(url);
-        console.log("SCAD blob URL revoked");
-      }, 1000);
-      
-      toast.success("SCAD file exported successfully", {
-        description: `Saved as ${downloadName}`
-      });
-    } catch (err) {
-      console.error("SCAD export failed:", err);
-      toast.error("Failed to export SCAD file");
-    }
-  };
-
   const handleError = useCallback((message: string) => {
-    setError(message);
-  }, []);
+    preview.setError(message);
+  }, [preview]);
 
   return (
     <div className="bg-background flex h-full flex-col">
       <ExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
-        files={files}
-        entryPath={entryPath}
-        fileName={fileName}
+        operation={preview.exportSTLOperation}
       />
       <div className="bg-muted/30 flex items-center justify-between border-b p-2">
         <div className="flex items-center space-x-2">
@@ -172,8 +54,8 @@ export function PreviewPanel({
 
         <div className="flex items-center space-x-1">
           <Toggle
-            pressed={showWireframe}
-            onPressedChange={setShowWireframe}
+            pressed={preview.showWireframe}
+            onPressedChange={preview.setShowWireframe}
             size="sm"
             aria-label="Toggle wireframe"
           >
@@ -186,17 +68,17 @@ export function PreviewPanel({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  aria-label={isCompiling ? "Rendering..." : "Render (F5)"}
-                  disabled={isCompiling || !entryPath}
-                  onClick={handleCompile}
+                  aria-label={preview.isCompiling ? "Rendering..." : "Render (F5)"}
+                  disabled={preview.isCompiling || !preview.canRender}
+                  onClick={preview.renderPreview}
                   size="icon"
                   variant="default"
                 >
-                  {isCompiling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                  {preview.isCompiling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{isCompiling ? "Rendering..." : "Render (F5)"}</p>
+                <p>{preview.isCompiling ? "Rendering..." : "Render (F5)"}</p>
               </TooltipContent>
             </Tooltip>
 
@@ -205,7 +87,7 @@ export function PreviewPanel({
                 <Button
                   aria-label="Export .scad"
                   disabled={!entryPath}
-                  onClick={handleExportSCAD}
+                  onClick={preview.exportSCAD}
                   size="icon"
                   variant="outline"
                 >
@@ -221,7 +103,7 @@ export function PreviewPanel({
               <TooltipTrigger asChild>
                 <Button
                   aria-label="Export .stl"
-                  disabled={!entryPath || isCompiling}
+                  disabled={!entryPath || preview.isCompiling}
                   onClick={handleExportSTL}
                   size="icon"
                   variant="outline"
@@ -237,11 +119,11 @@ export function PreviewPanel({
         </div>
       </div>
 
-      {error && (
+      {preview.error && (
         <div className="bg-destructive/10 border-b p-2">
           <div className="flex items-start space-x-2">
             <AlertCircle className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
-            <pre className="text-destructive whitespace-pre-wrap text-xs">{error}</pre>
+            <pre className="text-destructive whitespace-pre-wrap text-xs">{preview.error}</pre>
           </div>
         </div>
       )}
@@ -261,20 +143,20 @@ export function PreviewPanel({
           </div>
         ) : (
           <div className="m-2 flex min-h-0 flex-1 overflow-hidden rounded-lg border bg-background">
-            <div className="relative min-h-0 flex-1 w-full">
+            <div className="relative min-h-0 w-full flex-1">
               <SCADViewer
-                data={geometryData}
-                format={geometryFormat}
-                showWireframe={showWireframe}
+                data={preview.geometryData}
+                format={preview.geometryFormat}
+                showWireframe={preview.showWireframe}
                 className="h-full min-h-0 w-full"
                 onError={handleError}
               />
-              {isCompiling && (
+              {preview.isCompiling && (
                 <div className="bg-background/80 absolute inset-0 flex items-center justify-center">
                   <div className="flex flex-col items-center space-y-2">
                     <Loader2 className="h-8 w-8 animate-spin" />
                     <p className="text-sm">
-                      {isWasmReady ? "Rendering with OpenSCAD..." : "Loading OpenSCAD WASM engine..."}
+                      {preview.isWasmReady ? "Rendering with OpenSCAD..." : "Loading OpenSCAD WASM engine..."}
                     </p>
                   </div>
                 </div>
@@ -285,33 +167,28 @@ export function PreviewPanel({
       </div>
 
       <div className="bg-muted/30 border-t p-3 text-xs text-muted-foreground">
-        {lastCompiledAt ? (
+        {preview.lastCompiledAt ? (
           <div className="flex items-center justify-between">
             <span>
               Last rendered:{" "}
-              {lastCompiledAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {preview.lastCompiledAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </span>
             <div className="flex items-center space-x-3">
               {autoPreview && <span>Auto-preview on</span>}
-              {showWireframe && <span>Wireframe enabled</span>}
+              {preview.showWireframe && <span>Wireframe enabled</span>}
             </div>
           </div>
         ) : (
           <div className="flex items-center justify-between">
             <span>
               {autoPreview
-                ? "Auto-preview enabled — code changes will render automatically."
+                ? "Auto-preview enabled - code changes will render automatically."
                 : "Hit Render to update the view."}
             </span>
-            {showWireframe && <span>Wireframe enabled</span>}
+            {preview.showWireframe && <span>Wireframe enabled</span>}
           </div>
         )}
       </div>
     </div>
   );
-}
-
-function getEntryTextFile(files: ProjectFile[], entryPath: string | null): ProjectTextFile | null {
-  const file = files.find((item) => item.path === entryPath);
-  return file?.kind === "scad" ? file : null;
 }

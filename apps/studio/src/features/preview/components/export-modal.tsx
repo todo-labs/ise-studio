@@ -10,19 +10,16 @@ import {
 } from "@ise-studio/ui/alert-dialog";
 import { Progress } from "@ise-studio/ui/progress";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
-import { compileOpenSCADProject } from "@ise-studio/openscad";
-import type { ProjectFile } from "@ise-studio/project";
+import type { ExportSTLOperation, ExportStatus } from "../preview-workflow";
 
 interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  files: ProjectFile[];
-  entryPath: string | null;
-  fileName: string;
+  operation: ExportSTLOperation;
 }
 
-export function ExportModal({ isOpen, onClose, files, entryPath, fileName }: ExportModalProps) {
-  const [status, setStatus] = useState<"idle" | "exporting" | "saving" | "completed" | "error">("idle");
+export function ExportModal({ isOpen, onClose, operation }: ExportModalProps) {
+  const [status, setStatus] = useState<ExportStatus>("idle");
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState("Preparing export...");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -39,79 +36,12 @@ export function ExportModal({ isOpen, onClose, files, entryPath, fileName }: Exp
     setStatusText("Rendering STL...");
 
     try {
-      const entryFile = files.find((file) => file.path === entryPath && file.kind === "scad");
-      if (!entryFile) {
-        throw new Error("Select a .scad file before exporting STL.");
-      }
-
-      const result = await compileOpenSCADProject({
-        files: files.map((file) => ({
-          path: file.path,
-          content: file.content,
-        })),
-        entryPath: entryFile.path,
-        format: "stl",
-        onProgress: (percent, status) => {
-          setProgress(percent);
-          setStatusText(`${status} (${percent}%)...`);
-        },
+      await operation.run((nextProgress) => {
+        setStatus(nextProgress.status);
+        setProgress(nextProgress.progress);
+        setStatusText(nextProgress.statusText);
       });
-
-      if (!result.geometry) {
-        const errorDetail = result.stderr ? `\n\nDetails:\n${result.stderr}` : "";
-        throw new Error(`No geometry produced (Exit code: ${result.exitCode})${errorDetail}`);
-      }
-
-      setStatus("saving");
-      setStatusText("Opening save dialog...");
-
-      const blob = new Blob([result.geometry.buffer as ArrayBuffer], {
-        type: "application/octet-stream",
-      });
-      const downloadName = fileName.replace(/\.scad$/, "") + ".stl";
-
-      // Attempt to use File System Access API if available
-      if ("showSaveFilePicker" in window) {
-        try {
-          const handle = await (window as any).showSaveFilePicker({
-            suggestedName: downloadName,
-            types: [
-              {
-                description: "STL File",
-                accept: { "application/octet-stream": [".stl"] },
-              },
-            ],
-          });
-          const writable = await handle.createWritable();
-          await writable.write(blob);
-          await writable.close();
-          setStatus("completed");
-        } catch (err: any) {
-          if (err.name === "AbortError") {
-            // User cancelled save dialog, just reset to completed so they can close or try again
-            setStatus("completed");
-            setStatusText("Save cancelled by user.");
-          } else {
-            throw err;
-          }
-        }
-      } else {
-        // Fallback for browsers that don't support showSaveFilePicker
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = downloadName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        
-        // Delay revocation to ensure browser has started the download
-        setTimeout(() => {
-          URL.revokeObjectURL(url);
-        }, 1000);
-        
-        setStatus("completed");
-      }
+      setStatus("completed");
     } catch (err) {
       setStatus("error");
       setErrorMessage(err instanceof Error ? err.message : "An unknown error occurred");
