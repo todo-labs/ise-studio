@@ -20,7 +20,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          three: ["three", "@react-three/fiber", "@react-three/drei"],
+          three: ["three", "three-stdlib"],
           monaco: ["@monaco-editor/react"],
         },
         assetFileNames: "assets/[name].[hash][extname]",
