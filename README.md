@@ -158,7 +158,7 @@ The AI assistant can chain these tools together to help you write, debug, and op
 ## Roadmap
 
 - [x] Custom themes and editor configurations
-- [ ] Performance profiling and optimization tips
+- [x] Performance profiling and optimization tips
 - [ ] GPU-accelerated preview for complex models
 
 ## Contributing
