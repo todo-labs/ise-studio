@@ -5,3 +5,4 @@ export const EXPORT_SCAD_EVENT = "ise:export-scad";
 export const FOCUS_EDITOR_EVENT = "ise:focus-editor";
 export const FORMAT_DOCUMENT_EVENT = "ise:format-document";
 export const OPEN_LIBRARY_BROWSER_EVENT = "ise:open-library-browser";
+export const OPEN_VISUAL_BLOCKS_EVENT = "ise:open-visual-blocks";

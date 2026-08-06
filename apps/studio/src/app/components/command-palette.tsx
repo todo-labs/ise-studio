@@ -1,16 +1,42 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { AlignLeft, Archive, Code2, Copy, Download, FilePlus2, Library, Play, Settings2 } from "lucide-react";
+import {
+  AlignLeft,
+  Archive,
+  Code2,
+  Copy,
+  Download,
+  FilePlus2,
+  Library,
+  Play,
+  Puzzle,
+  Settings2,
+  WandSparkles,
+  ScanLine,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@ise-studio/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@ise-studio/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@ise-studio/ui/dialog";
 import { Input } from "@ise-studio/ui/input";
 import { cn } from "@ise-studio/ui/utils";
 import {
   getRegisteredStudioExtensions,
+  loadStudioExtension,
   subscribeToStudioExtensions,
 } from "@ise-studio/ui/studio-extensions";
-import { buildCodeShareUrl, exportProjectArchive, importProjectArchive, importScadFile } from "../file-io";
+import {
+  buildCodeShareUrl,
+  exportProjectArchive,
+  importProjectArchive,
+  importScadFile,
+  importSTLFile,
+} from "../file-io";
 import {
   COMPILE_PREVIEW_EVENT,
   EXPORT_SCAD_EVENT,
@@ -18,6 +44,7 @@ import {
   FORMAT_DOCUMENT_EVENT,
   OPEN_COMMAND_PALETTE_EVENT,
   OPEN_LIBRARY_BROWSER_EVENT,
+  OPEN_VISUAL_BLOCKS_EVENT,
   OPEN_SETTINGS_EVENT,
 } from "@ise-studio/ui/studio-events";
 
@@ -36,7 +63,12 @@ interface Command {
   run: () => void | Promise<void>;
 }
 
-export function CommandPalette({ code, fileName, onCodeChange, onFileNameChange }: CommandPaletteProps) {
+export function CommandPalette({
+  code,
+  fileName,
+  onCodeChange,
+  onFileNameChange,
+}: CommandPaletteProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -106,7 +138,9 @@ export function CommandPalette({ code, fileName, onCodeChange, onFileNameChange 
               onFileNameChange(result.fileName);
             }
           } catch (error) {
-            toast.error("Could not import the SCAD file", { description: error instanceof Error ? error.message : "File access failed." });
+            toast.error("Could not import the SCAD file", {
+              description: error instanceof Error ? error.message : "File access failed.",
+            });
           }
         },
       },
@@ -123,7 +157,31 @@ export function CommandPalette({ code, fileName, onCodeChange, onFileNameChange 
               onFileNameChange(result.fileName);
             }
           } catch (error) {
-            toast.error("Could not import the project archive", { description: error instanceof Error ? error.message : "Archive access failed." });
+            toast.error("Could not import the project archive", {
+              description: error instanceof Error ? error.message : "Archive access failed.",
+            });
+          }
+        },
+      },
+      {
+        id: "reverse-engineer-stl",
+        label: "Reverse engineer STL",
+        hint: "Infer primitives and generate editable OpenSCAD",
+        icon: ScanLine,
+        run: async () => {
+          try {
+            const result = await importSTLFile();
+            if (result) {
+              onCodeChange(result.code);
+              onFileNameChange(result.fileName);
+              toast.success(`Generated ${result.analysis.inferredShape} approximation`, {
+                description: `${Math.round(result.analysis.confidence * 100)}% confidence · ${result.analysis.triangles} triangles`,
+              });
+            }
+          } catch (error) {
+            toast.error("Could not reverse engineer the STL", {
+              description: error instanceof Error ? error.message : "The STL file is invalid.",
+            });
           }
         },
       },
@@ -161,6 +219,31 @@ export function CommandPalette({ code, fileName, onCodeChange, onFileNameChange 
         hint: "Insert a bundled include into the editor",
         icon: Library,
         run: () => window.dispatchEvent(new Event(OPEN_LIBRARY_BROWSER_EVENT)),
+      },
+      {
+        id: "visual-blocks",
+        label: "Open visual block mode",
+        hint: "Generate editable OpenSCAD from primitives",
+        icon: WandSparkles,
+        run: () => window.dispatchEvent(new Event(OPEN_VISUAL_BLOCKS_EVENT)),
+      },
+      {
+        id: "load-extension",
+        label: "Load studio extension",
+        hint: "Import a trusted JavaScript extension module",
+        icon: Puzzle,
+        run: async () => {
+          const moduleUrl = window.prompt("Trusted extension module URL");
+          if (!moduleUrl?.trim()) return;
+          try {
+            await loadStudioExtension(moduleUrl);
+            toast.success("Studio extension loaded");
+          } catch (error) {
+            toast.error("Could not load the extension", {
+              description: error instanceof Error ? error.message : "The module is invalid.",
+            });
+          }
+        },
       },
       {
         id: "settings",
@@ -224,13 +307,18 @@ export function CommandPalette({ code, fileName, onCodeChange, onFileNameChange 
         </div>
         <div className="max-h-80 overflow-y-auto px-2 pb-2">
           {filteredCommands.length === 0 ? (
-            <p className="text-muted-foreground px-3 py-8 text-center text-sm">No matching commands.</p>
+            <p className="text-muted-foreground px-3 py-8 text-center text-sm">
+              No matching commands.
+            </p>
           ) : (
             filteredCommands.map((command, index) => {
               const Icon = command.icon;
               return (
                 <Button
-                  className={cn("h-auto w-full justify-start gap-3 px-3 py-2.5 text-left", index === activeIndex && "bg-accent")}
+                  className={cn(
+                    "h-auto w-full justify-start gap-3 px-3 py-2.5 text-left",
+                    index === activeIndex && "bg-accent",
+                  )}
                   key={command.id}
                   onClick={() => void runCommand(command)}
                   variant="ghost"
@@ -238,7 +326,9 @@ export function CommandPalette({ code, fileName, onCodeChange, onFileNameChange 
                   <Icon className="text-muted-foreground size-4" />
                   <span className="flex min-w-0 flex-col items-start">
                     <span>{command.label}</span>
-                    <span className="text-muted-foreground text-xs font-normal">{command.hint}</span>
+                    <span className="text-muted-foreground text-xs font-normal">
+                      {command.hint}
+                    </span>
                   </span>
                 </Button>
               );

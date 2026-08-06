@@ -5,5 +5,6 @@ export * from "./invocation";
 export * from "./openscad-docs";
 export * from "./openscad-library-manifest";
 export * from "./syntax";
+export * from "./visual-blocks";
 export { terminateOpenSCAD } from "./worker-client";
 export type { OpenSCADRunOptions } from "./worker-client";

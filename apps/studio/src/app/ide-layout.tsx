@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@ise-studio/ui/resizable";
 import { IDEHeader } from "./components/ide-header";
 import { useSingleFile } from "./use-studio-workspace";
-import { CodeEditor, LibraryBrowser } from "@/features/editor";
+import { CodeEditor, LibraryBrowser, VisualBlocksPanel } from "@/features/editor";
 import { ErrorBoundary } from "./components/error-boundary";
 import { CommandPalette } from "./components/command-palette";
 import { exportScadFile } from "./file-io";
@@ -12,18 +12,25 @@ import { useStudioHistory } from "./use-studio-history";
 import { HistoryPanel } from "./components/history-panel";
 import { useStudioLayoutStore } from "./studio-layout-store";
 
-const AIChat = lazy(() => import("@/features/ai-assistant").then((module) => ({ default: module.AIChat })));
-const PreviewPanel = lazy(() => import("@/features/preview").then((module) => ({ default: module.PreviewPanel })));
+const AIChat = lazy(() =>
+  import("@/features/ai-assistant").then((module) => ({ default: module.AIChat })),
+);
+const PreviewPanel = lazy(() =>
+  import("@/features/preview").then((module) => ({ default: module.PreviewPanel })),
+);
 
 export function IDELayout() {
   const { code, setCode } = useSingleFile();
-  const { fileName, isChatOpen, selection, setFileName, setSelection, toggleChat } = useStudioLayoutStore();
+  const { fileName, isChatOpen, selection, setFileName, setSelection, toggleChat } =
+    useStudioLayoutStore();
   const { entries, record } = useStudioHistory(code);
 
   useEffect(() => {
     const exportSource = () => {
       void exportScadFile(code, fileName).catch((error) => {
-        toast.error("Could not export the SCAD file", { description: error instanceof Error ? error.message : "File access failed." });
+        toast.error("Could not export the SCAD file", {
+          description: error instanceof Error ? error.message : "File access failed.",
+        });
       });
     };
     window.addEventListener(EXPORT_SCAD_EVENT, exportSource);
@@ -51,7 +58,13 @@ export function IDELayout() {
           <>
             <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
               <ErrorBoundary name="AI assistant">
-                <Suspense fallback={<div className="text-muted-foreground grid h-full place-items-center text-sm">Loading assistant…</div>}>
+                <Suspense
+                  fallback={
+                    <div className="text-muted-foreground grid h-full place-items-center text-sm">
+                      Loading assistant…
+                    </div>
+                  }
+                >
                   <AIChat
                     isOpen={isChatOpen}
                     onClose={() => useStudioLayoutStore.getState().setIsChatOpen(false)}
@@ -87,8 +100,19 @@ export function IDELayout() {
 
             <ResizablePanel defaultSize={50} minSize={30}>
               <ErrorBoundary name="Preview">
-                <Suspense fallback={<div className="text-muted-foreground grid h-full place-items-center text-sm">Loading preview…</div>}>
-                  <PreviewPanel fileName={fileName} code={code} onCodeChange={setCode} onSuccessfulCompile={() => record(code, "preview")} />
+                <Suspense
+                  fallback={
+                    <div className="text-muted-foreground grid h-full place-items-center text-sm">
+                      Loading preview…
+                    </div>
+                  }
+                >
+                  <PreviewPanel
+                    fileName={fileName}
+                    code={code}
+                    onCodeChange={setCode}
+                    onSuccessfulCompile={() => record(code, "preview")}
+                  />
                 </Suspense>
               </ErrorBoundary>
             </ResizablePanel>
@@ -105,6 +129,7 @@ export function IDELayout() {
         onFileNameChange={setFileName}
       />
       <LibraryBrowser code={code} onCodeChange={setCode} />
+      <VisualBlocksPanel onCodeChange={setCode} />
     </div>
   );
 }
