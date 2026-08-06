@@ -2,9 +2,8 @@
 
 An open-source, browser-based IDE for OpenSCAD with AI-powered coding assistance. Write, compile, and preview 3D models directly in your browser using the official OpenSCAD compiler via WebAssembly.
 
-![ISE Studio Screenshot](public/screenshot.png)
-
-Built with **Vite**, **React 19**, **TypeScript**, **Monaco Editor**, and **shadcn/ui**.
+[![ISE Studio Preview](apps/studio/public/screenshot.png)](https://ise-studio.app/)
+Built with [**Vite**](https://vitejs.dev/), [**React 19**](https://reactjs.org/), [**TypeScript**](https://www.typescriptlang.org/), [**Monaco Editor**](https://microsoft.github.io/monaco-editor/) [**shadcn/ui**](https://ui.shadcn.com/) and [WebAssembly](https://webassembly.org/).
 
 ## Features
 
@@ -22,6 +21,7 @@ Built with **Vite**, **React 19**, **TypeScript**, **Monaco Editor**, and **shad
 - Tool-based AI workflows with code validation and modification
 - Search OpenSCAD documentation in context
 - AI-assisted code editing with selection awareness
+- AI Elements context usage bar with model, tokens, context limit, and estimated cost
 - Bring your own API key (no backend required)
 - Agentic function calling for intelligent code suggestions
 
@@ -93,6 +93,9 @@ ISE Studio uses a client-first architecture:
 - **3D Rendering**: Three.js renders STL/OBJ geometry data from the compiler
 - **AI Integration**: OpenRouter API handles all LLM requests with tool calling support
 - **Local Tools**: Validate syntax, inspect geometry, search docs, and apply code patches via AI functions
+- **Parametric Customizer**: Annotate assignments with ranges or option lists and edit them without leaving the preview
+- **Offline Shell**: Installable PWA caching the editor shell, WASM compiler, and commonly used bundled libraries
+- **Keyboard Workflow**: Command palette with import/export, formatting, library insertion, and preview commands
 
 ## Tech Stack
 
@@ -109,32 +112,31 @@ ISE Studio uses a client-first architecture:
 ## Project Structure
 
 ```
-src/
-├── App.tsx                    # Main application component
-├── main.tsx                   # Browser entry point
-├── components/
-│   ├── ide/
-│   │   ├── ide-layout.tsx     # Main IDE layout with panels
-│   │   ├── ide-header.tsx     # Header with theme toggle
-│   │   ├── code-editor.tsx    # Monaco editor with selection tracking
-│   │   ├── preview-panel.tsx  # Preview pane with compile controls
-│   │   ├── scad-viewer.tsx    # 3D viewer for compiled geometry
-│   │   ├── ai-chat.tsx        # AI assistant chat panel
-│   │   └── file-explorer.tsx  # File tree (future)
-│   ├── ai-elements/           # AI chat UI components
-│   └── ui/                    # shadcn/ui components
-├── lib/
-│   ├── openscad-runner.ts     # WASM compiler interface
-│   ├── off-parser.ts          # OBJ format parser
-│   ├── ai-client.ts           # OpenRouter API integration
-│   ├── ai-tools.ts            # AI tool definitions and handlers
-│   ├── openscad-docs.ts       # OpenSCAD documentation data
-│   ├── openscad-monaco.ts     # Monaco language support
-│   ├── ai-settings.ts         # Settings persistence
-│   └── utils/                 # Utility functions
-├── workers/
-│   └── openscad-worker.ts     # Web Worker for compilation
-└── styles/                    # Global styles
+apps/
+└── studio/                    # Vite React app shell
+    ├── src/
+    │   ├── app/               # IDE layout and app-level composition
+    │   ├── features/
+    │   │   ├── ai-assistant/  # Assistant panel integration
+    │   │   ├── editor/        # Monaco editor feature wiring
+    │   │   ├── preview/       # Compile + render workflow
+    │   │   └── settings/      # Settings modal and UX
+    │   ├── hooks/             # App-specific hooks
+    │   └── styles/            # Global styles
+    └── public/static/wasm/    # OpenSCAD WebAssembly assets
+
+packages/
+├── ai/                        # OpenRouter agent, tools, pricing, settings
+├── editor/                    # Monaco language setup and editor settings
+├── geometry/                  # Geometry DSL and OFF parsing
+├── openscad/                  # OpenSCAD compiler, worker client, docs, cache
+└── ui/                        # Shared UI primitives and AI UI elements
+
+docs/
+├── CONTEXT.md                 # Domain and architecture context
+└── adr/                       # Architecture decision records
+
+tests/                         # End-to-end and integration tests
 ```
 
 ## AI Tools & Workflows
@@ -147,12 +149,14 @@ ISE Studio provides AI-powered tools that enable intelligent code modifications:
 - **`apply_patch_to_selection`**: Apply code edits to the current selection or whole document
 - **`openrouter:web_search`**: Optional web search for external references
 
+Use `⌘K`/`Ctrl+K` for the command palette. Customizer controls are generated from annotations such as
+`width = 20; // [1:40:1]` and `shape = "cube"; // [cube, sphere]`.
+The command palette can also copy a URL-encoded source link; opening that link seeds the local single-file document.
+
 The AI assistant can chain these tools together to help you write, debug, and optimize OpenSCAD code.
 
 ## Roadmap
 
-- [x] File explorer with project management
-- [x] Multi-file support with imports
 - [x] Custom themes and editor configurations
 - [ ] Performance profiling and optimization tips
 - [ ] GPU-accelerated preview for complex models
