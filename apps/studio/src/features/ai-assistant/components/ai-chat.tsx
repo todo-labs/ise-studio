@@ -1,7 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Bot, CheckIcon, CopyIcon, GlobeIcon } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
-import { DirectChatTransport, getToolName, isTextUIPart, isToolUIPart, type ChatStatus, type UIMessage } from "ai";
+import {
+  DirectChatTransport,
+  isTextUIPart,
+  isToolUIPart,
+  type ChatStatus,
+  type UIMessage,
+} from "ai";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 
@@ -47,6 +53,13 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "@ise-studio/ui/ai-elements/prompt-input";
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from "@ise-studio/ui/ai-elements/tool";
 import {
   createOpenRouterChatAgent,
   accumulateConversationUsage,
@@ -337,7 +350,9 @@ function VirtualizedConversationMessages({
             ref={virtualizer.measureElement}
             style={{ transform: `translateY(${item.start}px)` }}
           >
-            {item.index < messages.length ? <ConversationMessage message={messages[item.index]!} /> : null}
+            {item.index < messages.length ? (
+              <ConversationMessage message={messages[item.index]!} />
+            ) : null}
             {isThinkingItem ? (
               <div className="max-w-[85%] px-1 text-sm text-muted-foreground">Thinking...</div>
             ) : null}
@@ -383,22 +398,21 @@ function ConversationMessage({ message }: { message: UIMessage }) {
             }
 
             if (part.type === "dynamic-tool" || isToolUIPart(part)) {
-              const toolName = getToolName(part);
               return (
-                <div
+                <Tool
                   key={`${message.id}-${index}`}
-                  className="my-1.5 flex w-fit items-center gap-2 rounded-md border border-border/50 bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground shadow-sm"
+                  defaultOpen={part.state === "output-error" || part.state === "output-available"}
                 >
-                  <Bot className="size-3.5 opacity-70" />
-                  <span className="font-mono">{toolName}</span>
-                  {part.state === "input-streaming" ? (
-                    <span className="animate-pulse">...</span>
-                  ) : part.state === "output-error" ? (
-                    <span className="text-destructive font-medium">Failed</span>
+                  {part.type === "dynamic-tool" ? (
+                    <ToolHeader type={part.type} toolName={part.toolName} state={part.state} />
                   ) : (
-                    <span className="text-emerald-500 font-medium">✓</span>
+                    <ToolHeader type={part.type} state={part.state} />
                   )}
-                </div>
+                  <ToolContent>
+                    <ToolInput input={part.input} />
+                    <ToolOutput output={part.output} errorText={part.errorText} />
+                  </ToolContent>
+                </Tool>
               );
             }
 
