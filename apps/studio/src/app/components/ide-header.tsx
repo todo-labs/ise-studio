@@ -1,6 +1,7 @@
 import { Button, buttonVariants } from "@ise-studio/ui/button";
-import { MessageSquare } from "lucide-react";
+import { Command, MessageSquare } from "lucide-react";
 import { SettingsModal } from "@/features/settings";
+import { OPEN_COMMAND_PALETTE_EVENT } from "@ise-studio/ui/studio-events";
 
 interface IDEHeaderProps {
   isChatOpen: boolean;
@@ -23,6 +24,16 @@ export function IDEHeader({ isChatOpen, onToggleChat }: IDEHeaderProps) {
 
         {/* Right side - Actions */}
         <div className="flex items-center space-x-2">
+          <Button
+            aria-label="Open command palette"
+            className="gap-1.5"
+            onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_PALETTE_EVENT))}
+            size="sm"
+            variant="ghost"
+          >
+            <Command className="h-4 w-4" />
+            <span className="hidden text-xs sm:inline">⌘K</span>
+          </Button>
           <Button
             variant={isChatOpen ? "default" : "ghost"}
             size="sm"

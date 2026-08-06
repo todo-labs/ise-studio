@@ -1,0 +1,10 @@
+{
+  "name": "ISE Studio",
+  "short_name": "ISE Studio",
+  "description": "A browser-first OpenSCAD workbench with local persistence and AI assistance.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1115",
+  "theme_color": "#0f1115",
+  "icons": [{ "src": "/favicon.ico", "sizes": "32x32", "type": "image/x-icon" }]
+}
