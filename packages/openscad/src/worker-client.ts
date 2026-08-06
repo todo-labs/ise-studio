@@ -34,6 +34,7 @@ interface QueuedRequest {
   signal?: AbortSignal;
   timeoutMs: number;
   settled: boolean;
+  workerRetryCount: number;
   removeAbortListener?: () => void;
 }
 
@@ -130,6 +131,16 @@ function processQueue() {
 
   activeWorker.onerror = (e: ErrorEvent) => {
     if (req.settled) return;
+
+    if (req.workerRetryCount < 1 && !req.signal?.aborted) {
+      req.workerRetryCount += 1;
+      cleanup();
+      req.settled = false;
+      requestQueue.unshift(req);
+      processQueue();
+      return;
+    }
+
     req.settled = true;
     req.reject(new Error(e.message || "Worker error"));
     cleanup();
@@ -163,6 +174,7 @@ export function runOpenSCAD(
       signal: options.signal,
       timeoutMs: Math.max(1, options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       settled: false,
+      workerRetryCount: 0,
     };
 
     if (options.signal?.aborted) {
