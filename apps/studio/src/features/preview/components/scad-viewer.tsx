@@ -74,7 +74,8 @@ async function mountGeometry(
   isCancelled: () => boolean,
   onError?: (message: string) => void,
 ) {
-  const renderer = await createRenderer(canvas);
+  const preferWebGPU = new URLSearchParams(window.location.search).get("renderer") === "webgpu";
+  const renderer = await createRenderer(canvas, preferWebGPU);
   if (!renderer || isCancelled()) {
     renderer?.dispose();
     if (!renderer) onError?.("WebGL is unavailable in this browser.");
@@ -134,10 +135,22 @@ async function mountGeometry(
   observer.observe(canvas);
   resize();
   let animationFrame = 0;
+  let renderFailed = false;
   const render = () => {
-    controls.update();
-    renderer.render(scene, camera);
-    animationFrame = requestAnimationFrame(render);
+    if (renderFailed || isCancelled()) return;
+    try {
+      controls.update();
+      renderer.render(scene, camera);
+      animationFrame = requestAnimationFrame(render);
+    } catch (error) {
+      renderFailed = true;
+      onError?.(
+        error instanceof Error
+          ? `The 3D renderer failed: ${error.message}`
+          : "The 3D renderer failed.",
+      );
+      renderer.dispose();
+    }
   };
   render();
 
@@ -160,7 +173,17 @@ interface RendererLike {
   dispose: () => void;
 }
 
-async function createRenderer(canvas: HTMLCanvasElement): Promise<RendererLike | null> {
+async function createRenderer(canvas: HTMLCanvasElement, preferWebGPU: boolean): Promise<RendererLike | null> {
+  if (preferWebGPU && "gpu" in navigator) {
+    try {
+      const { WebGPURenderer } = await import("three/webgpu");
+      const renderer = new WebGPURenderer({ canvas, antialias: true, alpha: true });
+      await renderer.init();
+      return renderer as unknown as RendererLike;
+    } catch {
+      // The opt-in renderer is capability-gated; use WebGL as a safe fallback.
+    }
+  }
   try {
     return new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   } catch {
