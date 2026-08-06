@@ -159,7 +159,7 @@ The AI assistant can chain these tools together to help you write, debug, and op
 
 - [x] Custom themes and editor configurations
 - [x] Performance profiling and optimization tips
-- [ ] GPU-accelerated preview for complex models
+- [x] GPU-accelerated preview for complex models (opt in with `?renderer=webgpu`; WebGL remains the default)
 
 ## Contributing
 
