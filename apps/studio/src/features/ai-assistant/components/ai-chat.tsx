@@ -71,6 +71,8 @@ interface AIChatProps {
   onCodeChange: (code: string) => void;
 }
 
+const MAX_CONVERSATION_MESSAGES = 50;
+
 export function AIChat({
   isOpen,
   onClose: _onClose,
@@ -135,9 +137,14 @@ export function AIChat({
     return new DirectChatTransport({ agent });
   }, [agent]);
 
-  const { messages, sendMessage, status, error } = useChat({
+  const { messages, setMessages, sendMessage, status, error } = useChat({
     transport: transport ?? undefined,
   });
+
+  useEffect(() => {
+    if (status !== "ready" || messages.length <= MAX_CONVERSATION_MESSAGES) return;
+    setMessages((current) => current.slice(-MAX_CONVERSATION_MESSAGES));
+  }, [messages.length, setMessages, status]);
 
   const { inputTokens, outputTokens, reasoningTokens, cachedInputTokens } = useMemo(() => {
     return accumulateConversationUsage(messages);
