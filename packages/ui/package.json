@@ -33,6 +33,7 @@
     "./slider": "./src/components/ui/slider.tsx",
     "./sonner": "./src/components/ui/sonner.tsx",
     "./studio-events": "./src/studio-events.ts",
+    "./studio-extensions": "./src/studio-extensions.ts",
     "./tabs": "./src/components/ui/tabs.tsx",
     "./theme": "./src/lib/theme.ts",
     "./theme-provider": "./src/components/theme/theme-provider.tsx",

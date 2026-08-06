@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { AlignLeft, Archive, Code2, Copy, Download, FilePlus2, Library, Play, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -6,6 +6,10 @@ import { Button } from "@ise-studio/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@ise-studio/ui/dialog";
 import { Input } from "@ise-studio/ui/input";
 import { cn } from "@ise-studio/ui/utils";
+import {
+  getRegisteredStudioExtensions,
+  subscribeToStudioExtensions,
+} from "@ise-studio/ui/studio-extensions";
 import { buildCodeShareUrl, exportProjectArchive, importProjectArchive, importScadFile } from "../file-io";
 import {
   COMPILE_PREVIEW_EVENT,
@@ -37,6 +41,11 @@ export function CommandPalette({ code, fileName, onCodeChange, onFileNameChange 
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const extensions = useSyncExternalStore(
+    subscribeToStudioExtensions,
+    getRegisteredStudioExtensions,
+    getRegisteredStudioExtensions,
+  );
 
   useEffect(() => {
     const openPalette = () => setOpen(true);
@@ -160,8 +169,16 @@ export function CommandPalette({ code, fileName, onCodeChange, onFileNameChange 
         icon: Settings2,
         run: () => window.dispatchEvent(new Event(OPEN_SETTINGS_EVENT)),
       },
+      ...extensions.flatMap((extension) =>
+        (extension.commands ?? []).map((command) => ({
+          ...command,
+          id: `${extension.id}:${command.id}`,
+          hint: `${extension.name} · ${command.hint}`,
+          icon: Code2,
+        })),
+      ),
     ],
-    [code, fileName, onCodeChange, onFileNameChange],
+    [code, extensions, fileName, onCodeChange, onFileNameChange],
   );
 
   const filteredCommands = commands.filter((command) =>
