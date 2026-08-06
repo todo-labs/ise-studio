@@ -102,7 +102,13 @@ async function mountGeometry(
     wireframe: showWireframe,
   });
   const mesh = new THREE.Mesh(geometry, material);
-  scene.add(mesh);
+  // OpenSCAD uses Z-up coordinates while Three.js uses Y-up coordinates.
+  // Rotate the model so OpenSCAD's vertical axis sits on the preview ground
+  // plane instead of pointing toward the camera.
+  const model = new THREE.Group();
+  model.rotation.x = -Math.PI / 2;
+  model.add(mesh);
+  scene.add(model);
 
   const radius = Math.max(geometry.boundingSphere?.radius ?? 10, 1);
   camera.position.set(radius * 2.2, radius * 1.7, radius * 2.2);
