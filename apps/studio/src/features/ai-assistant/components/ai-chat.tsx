@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Bot, CheckIcon, CopyIcon, GlobeIcon } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
-import { DirectChatTransport, getToolName, isTextUIPart, isToolUIPart } from "ai";
+import { DirectChatTransport, getToolName, isTextUIPart, isToolUIPart, type ChatStatus, type UIMessage } from "ai";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useStickToBottomContext } from "use-stick-to-bottom";
 
 import {
   Conversation,
@@ -247,70 +249,8 @@ export function AIChat({
               description="Ask about OpenSCAD code, rendering, or the current scene."
             />
           ) : null}
-          {messages.map((message) => (
-            <div key={message.id} className="space-y-3">
-              {message.role === "user" ? (
-                <Message from="user">
-                  <MessageContent className="bg-primary text-primary-foreground">
-                    {message.parts.map((part, index) =>
-                      isTextUIPart(part) ? (
-                        <MessageResponse key={`${message.id}-${index}`}>
-                          {part.text}
-                        </MessageResponse>
-                      ) : null,
-                    )}
-                  </MessageContent>
-                </Message>
-              ) : (
-                <div className="group space-y-3 px-1 text-sm leading-6">
-                  {message.parts.map((part, index) => {
-                    if (isTextUIPart(part)) {
-                      return (
-                        <div key={`${message.id}-${index}`} className="space-y-2">
-                          <MessageResponse>{part.text}</MessageResponse>
-                          {index === message.parts.length - 1 && (
-                            <MessageActions>
-                              <CopyButton text={part.text} />
-                            </MessageActions>
-                          )}
-                        </div>
-                      );
-                    }
-
-                    if (part.type === "dynamic-tool" || isToolUIPart(part)) {
-                      const toolName = getToolName(part);
-
-                      return (
-                        <div
-                          key={`${message.id}-${index}`}
-                          className="my-1.5 flex w-fit items-center gap-2 rounded-md border border-border/50 bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground shadow-sm"
-                        >
-                          <Bot className="size-3.5 opacity-70" />
-                          <span className="font-mono">{toolName}</span>
-                          {part.state === "input-streaming" ? (
-                            <span className="animate-pulse">...</span>
-                          ) : part.state === "output-error" ? (
-                            <span className="text-destructive font-medium">Failed</span>
-                          ) : (
-                            <span className="text-emerald-500 font-medium">✓</span>
-                          )}
-                        </div>
-                      );
-                    }
-
-                    return null;
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
-          {status === "submitted" || status === "streaming" ? (
-            <div className="max-w-[85%] px-1 text-sm text-muted-foreground">Thinking...</div>
-          ) : null}
-          {error ? (
-            <div className="bg-destructive/10 text-destructive max-w-[95%] rounded-md px-3 py-2 text-sm">
-              {formatChatError(error)}
-            </div>
+          {messages.length > 0 ? (
+            <VirtualizedConversationMessages messages={messages} status={status} error={error} />
           ) : null}
         </ConversationContent>
         <ConversationScrollButton />
@@ -355,6 +295,117 @@ export function AIChat({
           </PromptInputFooter>
         </PromptInput>
       </div>
+    </div>
+  );
+}
+
+function VirtualizedConversationMessages({
+  messages,
+  status,
+  error,
+}: {
+  messages: UIMessage[];
+  status: ChatStatus;
+  error?: Error;
+}) {
+  const { scrollRef } = useStickToBottomContext();
+  const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null);
+  const isThinking = status === "submitted" || status === "streaming";
+  const itemCount = messages.length + (isThinking ? 1 : 0) + (error ? 1 : 0);
+  const virtualizer = useVirtualizer({
+    count: itemCount,
+    getScrollElement: () => scrollElement,
+    estimateSize: () => 96,
+    overscan: 4,
+  });
+
+  useLayoutEffect(() => {
+    setScrollElement(scrollRef.current);
+  }, [scrollRef]);
+
+  return (
+    <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+      {virtualizer.getVirtualItems().map((item) => {
+        const isThinkingItem = item.index === messages.length && isThinking;
+        const isErrorItem = item.index === messages.length + (isThinking ? 1 : 0) && error;
+
+        return (
+          <div
+            className="absolute top-0 left-0 w-full pb-4"
+            data-index={item.index}
+            key={item.key}
+            ref={virtualizer.measureElement}
+            style={{ transform: `translateY(${item.start}px)` }}
+          >
+            {item.index < messages.length ? <ConversationMessage message={messages[item.index]!} /> : null}
+            {isThinkingItem ? (
+              <div className="max-w-[85%] px-1 text-sm text-muted-foreground">Thinking...</div>
+            ) : null}
+            {isErrorItem ? (
+              <div className="bg-destructive/10 text-destructive max-w-[95%] rounded-md px-3 py-2 text-sm">
+                {formatChatError(error)}
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ConversationMessage({ message }: { message: UIMessage }) {
+  return (
+    <div className="space-y-3">
+      {message.role === "user" ? (
+        <Message from="user">
+          <MessageContent className="bg-primary text-primary-foreground">
+            {message.parts.map((part, index) =>
+              isTextUIPart(part) ? (
+                <MessageResponse key={`${message.id}-${index}`}>{part.text}</MessageResponse>
+              ) : null,
+            )}
+          </MessageContent>
+        </Message>
+      ) : (
+        <div className="group space-y-3 px-1 text-sm leading-6">
+          {message.parts.map((part, index) => {
+            if (isTextUIPart(part)) {
+              return (
+                <div key={`${message.id}-${index}`} className="space-y-2">
+                  <MessageResponse>{part.text}</MessageResponse>
+                  {index === message.parts.length - 1 ? (
+                    <MessageActions>
+                      <CopyButton text={part.text} />
+                    </MessageActions>
+                  ) : null}
+                </div>
+              );
+            }
+
+            if (part.type === "dynamic-tool" || isToolUIPart(part)) {
+              const toolName = getToolName(part);
+              return (
+                <div
+                  key={`${message.id}-${index}`}
+                  className="my-1.5 flex w-fit items-center gap-2 rounded-md border border-border/50 bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground shadow-sm"
+                >
+                  <Bot className="size-3.5 opacity-70" />
+                  <span className="font-mono">{toolName}</span>
+                  {part.state === "input-streaming" ? (
+                    <span className="animate-pulse">...</span>
+                  ) : part.state === "output-error" ? (
+                    <span className="text-destructive font-medium">Failed</span>
+                  ) : (
+                    <span className="text-emerald-500 font-medium">✓</span>
+                  )}
+                </div>
+              );
+            }
+
+            return null;
+          })}
+        </div>
+      )}
     </div>
   );
 }
