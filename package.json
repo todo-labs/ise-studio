@@ -19,6 +19,7 @@
     "lint:fix": "cd apps/studio && bun run lint:fix",
     "preview": "cd apps/studio && bun run preview",
     "smoke:browser": "./scripts/playwright-smoke.sh",
+    "test": "bun test",
     "typecheck": "cd apps/studio && bun run typecheck",
     "workspaces:build": "turbo run build",
     "workspaces:dev": "turbo run dev",

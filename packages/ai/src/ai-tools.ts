@@ -103,7 +103,7 @@ async function inspectScene(args: ToolArguments, context: ToolContext) {
   }
 }
 
-function analyzeOffGeometry(data: Uint8Array) {
+export function analyzeOffGeometry(data: Uint8Array) {
   try {
     const lines = new TextDecoder().decode(data).split("\n").map((line) => line.trim()).filter(Boolean);
     if (!lines[0]?.startsWith("OFF")) return null;
