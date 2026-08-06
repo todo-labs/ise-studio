@@ -42,3 +42,4 @@ yarn-error.log*
 # agent files
 docs/
 .agents/
+test-results/
