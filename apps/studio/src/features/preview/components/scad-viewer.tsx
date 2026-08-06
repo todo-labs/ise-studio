@@ -33,10 +33,16 @@ export function SCADViewer({ geometryData, geometryFormat, showWireframe = false
         onError?.(event.data.error);
         return;
       }
-      void mountGeometry(canvas, event.data, showWireframe, () => disposed, onError).then((cleanup) => {
-        if (disposed) cleanup();
-        else disposeScene = cleanup;
-      });
+      void mountGeometry(canvas, event.data, showWireframe, () => disposed, onError)
+        .then((cleanup) => {
+          if (disposed) cleanup();
+          else disposeScene = cleanup;
+        })
+        .catch((error: unknown) => {
+          if (!disposed) {
+            onError?.(error instanceof Error ? error.message : "Could not start the 3D preview.");
+          }
+        });
     };
     worker.onerror = () => {
       worker.terminate();
@@ -149,16 +155,6 @@ interface RendererLike {
 }
 
 async function createRenderer(canvas: HTMLCanvasElement): Promise<RendererLike | null> {
-  if ("gpu" in navigator) {
-    try {
-      const { WebGPURenderer } = await import("three/webgpu");
-      const renderer = new WebGPURenderer({ canvas, antialias: true, alpha: true });
-      await renderer.init();
-      return renderer as unknown as RendererLike;
-    } catch {
-      // WebGPU is capability-gated; use the broadly supported WebGL path below.
-    }
-  }
   try {
     return new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   } catch {
