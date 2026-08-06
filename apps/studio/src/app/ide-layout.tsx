@@ -1,25 +1,23 @@
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { toast } from "sonner";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@ise-studio/ui/resizable";
 import { IDEHeader } from "./components/ide-header";
 import { useSingleFile } from "./use-studio-workspace";
 import { CodeEditor, LibraryBrowser } from "@/features/editor";
-import type { EditorSelection } from "@ise-studio/ai";
 import { ErrorBoundary } from "./components/error-boundary";
 import { CommandPalette } from "./components/command-palette";
 import { exportScadFile } from "./file-io";
 import { EXPORT_SCAD_EVENT } from "@ise-studio/ui/studio-events";
 import { useStudioHistory } from "./use-studio-history";
 import { HistoryPanel } from "./components/history-panel";
+import { useStudioLayoutStore } from "./studio-layout-store";
 
 const AIChat = lazy(() => import("@/features/ai-assistant").then((module) => ({ default: module.AIChat })));
 const PreviewPanel = lazy(() => import("@/features/preview").then((module) => ({ default: module.PreviewPanel })));
 
 export function IDELayout() {
   const { code, setCode } = useSingleFile();
-  const [fileName, setFileName] = useState("main.scad");
-  const [isChatOpen, setIsChatOpen] = useState(true);
-  const [selection, setSelection] = useState<EditorSelection | null>(null);
+  const { fileName, isChatOpen, selection, setFileName, setSelection, toggleChat } = useStudioLayoutStore();
   const { entries, record } = useStudioHistory(code);
 
   useEffect(() => {
@@ -36,17 +34,17 @@ export function IDELayout() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "C") {
         event.preventDefault();
-        setIsChatOpen((prev) => !prev);
+        toggleChat();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [toggleChat]);
 
   return (
     <div className="bg-background flex h-screen flex-col">
-      <IDEHeader isChatOpen={isChatOpen} onToggleChat={() => setIsChatOpen((prev) => !prev)} />
+      <IDEHeader isChatOpen={isChatOpen} onToggleChat={toggleChat} />
 
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         {isChatOpen && (
@@ -56,7 +54,7 @@ export function IDELayout() {
                 <Suspense fallback={<div className="text-muted-foreground grid h-full place-items-center text-sm">Loading assistant…</div>}>
                   <AIChat
                     isOpen={isChatOpen}
-                    onClose={() => setIsChatOpen(false)}
+                    onClose={() => useStudioLayoutStore.getState().setIsChatOpen(false)}
                     code={code}
                     currentSelection={selection}
                     onCodeChange={setCode}
