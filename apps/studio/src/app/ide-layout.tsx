@@ -1,19 +1,36 @@
-import { useCallback, useEffect, useState } from "react";
-import { FileCode, Loader2 } from "lucide-react";
+import { lazy, Suspense, useState, useEffect } from "react";
+import { toast } from "sonner";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@ise-studio/ui/resizable";
 import { IDEHeader } from "./components/ide-header";
-import { useStudioWorkspace } from "./use-studio-workspace";
-import { AIChat } from "@/features/ai-assistant";
-import { CodeEditor } from "@/features/editor";
-import { FileExplorer } from "@/features/project-explorer";
-import { PreviewPanel } from "@/features/preview";
+import { useSingleFile } from "./use-studio-workspace";
+import { CodeEditor, LibraryBrowser } from "@/features/editor";
 import type { EditorSelection } from "@ise-studio/ai";
-import type { ProjectMutation } from "@ise-studio/project";
+import { ErrorBoundary } from "./components/error-boundary";
+import { CommandPalette } from "./components/command-palette";
+import { exportScadFile } from "./file-io";
+import { EXPORT_SCAD_EVENT } from "@ise-studio/ui/studio-events";
+import { useStudioHistory } from "./use-studio-history";
+import { HistoryPanel } from "./components/history-panel";
+
+const AIChat = lazy(() => import("@/features/ai-assistant").then((module) => ({ default: module.AIChat })));
+const PreviewPanel = lazy(() => import("@/features/preview").then((module) => ({ default: module.PreviewPanel })));
 
 export function IDELayout() {
-  const workspace = useStudioWorkspace();
+  const { code, setCode } = useSingleFile();
+  const [fileName, setFileName] = useState("main.scad");
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [selection, setSelection] = useState<EditorSelection | null>(null);
+  const { entries, record } = useStudioHistory(code);
+
+  useEffect(() => {
+    const exportSource = () => {
+      void exportScadFile(code, fileName).catch((error) => {
+        toast.error("Could not export the SCAD file", { description: error instanceof Error ? error.message : "File access failed." });
+      });
+    };
+    window.addEventListener(EXPORT_SCAD_EVENT, exportSource);
+    return () => window.removeEventListener(EXPORT_SCAD_EVENT, exportSource);
+  }, [code, fileName]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -27,40 +44,6 @@ export function IDELayout() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const handleProjectMutation = useCallback(
-    (mutation: ProjectMutation) => {
-      workspace.mutateActiveProject(mutation);
-      if (mutation.type !== "update-file") {
-        setSelection(null);
-      }
-    },
-    [workspace],
-  );
-
-  const handleSelectProject = useCallback(
-    (projectId: string) => {
-      workspace.selectProject(projectId);
-      setSelection(null);
-    },
-    [workspace],
-  );
-
-  const handleCreateProject = useCallback(() => {
-    workspace.createProject();
-    setSelection(null);
-  }, [workspace]);
-
-  if (workspace.isLoadingProjects || !workspace.activeProject) {
-    return (
-      <div className="bg-background flex h-screen items-center justify-center text-sm text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading workspace...
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-background flex h-screen flex-col">
       <IDEHeader isChatOpen={isChatOpen} onToggleChat={() => setIsChatOpen((prev) => !prev)} />
@@ -69,13 +52,17 @@ export function IDELayout() {
         {isChatOpen && (
           <>
             <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
-              <AIChat
-                isOpen={isChatOpen}
-                onClose={() => setIsChatOpen(false)}
-                project={workspace.activeProject}
-                currentSelection={selection}
-                onProjectMutation={handleProjectMutation}
-              />
+              <ErrorBoundary name="AI assistant">
+                <Suspense fallback={<div className="text-muted-foreground grid h-full place-items-center text-sm">Loading assistant…</div>}>
+                  <AIChat
+                    isOpen={isChatOpen}
+                    onClose={() => setIsChatOpen(false)}
+                    code={code}
+                    currentSelection={selection}
+                    onCodeChange={setCode}
+                  />
+                </Suspense>
+              </ErrorBoundary>
             </ResizablePanel>
             <ResizableHandle withHandle />
           </>
@@ -85,32 +72,15 @@ export function IDELayout() {
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel defaultSize={50} minSize={30}>
               <div className="flex h-full min-w-0 flex-col">
-                <FileExplorer
-                  activeProject={workspace.activeProject}
-                  activeProjectId={workspace.activeProjectId}
-                  isSaving={workspace.isSavingProject}
-                  onCreateProject={handleCreateProject}
-                  onMutateProject={handleProjectMutation}
-                  onSelectProject={handleSelectProject}
-                  projects={workspace.projects}
-                />
                 <div className="min-h-0 flex-1">
-                  {workspace.activeTextFile ? (
+                  <ErrorBoundary name="Editor">
                     <CodeEditor
-                      code={workspace.activeTextFile.content}
-                      filePath={workspace.activeTextFile.path}
-                      onCodeChange={(content) =>
-                        handleProjectMutation({
-                          type: "update-file",
-                          path: workspace.activeTextFile!.path,
-                          content,
-                        })
-                      }
+                      code={code}
+                      filePath={fileName}
+                      onCodeChange={setCode}
                       onSelectionChange={setSelection}
                     />
-                  ) : (
-                    <AssetPlaceholder fileName={workspace.activeFile?.path ?? ""} />
-                  )}
+                  </ErrorBoundary>
                 </div>
               </div>
             </ResizablePanel>
@@ -118,36 +88,25 @@ export function IDELayout() {
             <ResizableHandle withHandle />
 
             <ResizablePanel defaultSize={50} minSize={30}>
-              <PreviewPanel
-                entryPath={workspace.activeTextFile?.path ?? null}
-                fileName={workspace.activeTextFile?.path ?? "main.scad"}
-                files={workspace.activeProject.files}
-              />
+              <ErrorBoundary name="Preview">
+                <Suspense fallback={<div className="text-muted-foreground grid h-full place-items-center text-sm">Loading preview…</div>}>
+                  <PreviewPanel fileName={fileName} code={code} onCodeChange={setCode} onSuccessfulCompile={() => record(code, "preview")} />
+                </Suspense>
+              </ErrorBoundary>
             </ResizablePanel>
           </ResizablePanelGroup>
         </ResizablePanel>
       </ResizablePanelGroup>
-    </div>
-  );
-}
 
-function AssetPlaceholder({ fileName }: { fileName: string }) {
-  return (
-    <div className="bg-background flex h-full flex-col">
-      <div className="flex flex-1 items-center justify-center p-6 text-center text-muted-foreground">
-        <div className="max-w-sm space-y-3">
-          <div className="bg-muted mx-auto flex h-14 w-14 items-center justify-center rounded-md">
-            <FileCode className="h-7 w-7" />
-          </div>
-          <div>
-            <h3 className="text-foreground text-sm font-medium">Asset files are mounted for imports</h3>
-            <p className="mt-1 text-sm">
-              Reference this file from a .scad file with import("{fileName}") or select a .scad file
-              to edit and render.
-            </p>
-          </div>
-        </div>
-      </div>
+      <HistoryPanel entries={entries} onRestore={setCode} />
+
+      <CommandPalette
+        code={code}
+        fileName={fileName}
+        onCodeChange={setCode}
+        onFileNameChange={setFileName}
+      />
+      <LibraryBrowser code={code} onCodeChange={setCode} />
     </div>
   );
 }

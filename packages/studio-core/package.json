@@ -1,6 +1,0 @@
-{
-  "name": "@ise-studio/core",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Deprecated compatibility package retained during modularization"
-}

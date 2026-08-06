@@ -1,4 +1,5 @@
 export { ExportModal } from "./components/export-modal";
 export { PreviewPanel } from "./components/preview-panel";
-export { SCADViewer } from "./components/scad-viewer";
-export { STLViewer } from "./components/stl-viewer";
+export { CustomizerPanel } from "./components/customizer-panel";
+export { SCADViewer, STLViewer } from "./components/scad-viewer";
+export { usePreviewWorkflow } from "./preview-workflow";

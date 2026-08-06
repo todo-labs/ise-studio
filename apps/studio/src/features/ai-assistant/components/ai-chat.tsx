@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bot, CheckIcon, CopyIcon, GlobeIcon } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
-import {
-  DirectChatTransport,
-  getToolName,
-  isTextUIPart,
-  isToolUIPart,
-} from "ai";
+import { DirectChatTransport, getToolName, isTextUIPart, isToolUIPart } from "ai";
 
 import {
   Conversation,
@@ -14,6 +9,18 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from "@ise-studio/ui/ai-elements/conversation";
+import {
+  Context,
+  ContextContent,
+  ContextContentBody,
+  ContextContentFooter,
+  ContextContentHeader,
+  ContextCacheUsage,
+  ContextInputUsage,
+  ContextOutputUsage,
+  ContextReasoningUsage,
+  ContextTrigger,
+} from "@ise-studio/ui/ai-elements/context";
 import {
   Message,
   MessageAction,
@@ -38,9 +45,14 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "@ise-studio/ui/ai-elements/prompt-input";
-import { createOpenRouterChatAgent } from "@ise-studio/ai";
-import type { EditorSelection } from "@ise-studio/ai";
-import type { BrowserProject, ProjectMutation } from "@ise-studio/project";
+import {
+  createOpenRouterChatAgent,
+  accumulateConversationUsage,
+  calculateCost,
+  getModelPricing,
+  type EditorSelection,
+  type ModelPricing,
+} from "@ise-studio/ai";
 import {
   AI_SETTINGS_EVENT,
   loadAISettings,
@@ -54,17 +66,17 @@ import { cn } from "@ise-studio/ui/utils";
 interface AIChatProps {
   isOpen: boolean;
   onClose: () => void;
-  project: BrowserProject;
+  code: string;
   currentSelection?: EditorSelection | null;
-  onProjectMutation: (mutation: ProjectMutation) => void;
+  onCodeChange: (code: string) => void;
 }
 
 export function AIChat({
   isOpen,
   onClose: _onClose,
-  project,
+  code,
   currentSelection,
-  onProjectMutation,
+  onCodeChange,
 }: AIChatProps) {
   const [input, setInput] = useState("");
   const [settings, setSettings] = useState<AISettings>(() =>
@@ -73,7 +85,9 @@ export function AIChat({
       : loadAISettings(),
   );
   const [useWebSearch, setUseWebSearch] = useState(false);
-  const projectRef = useRef(project);
+  const [pricing, setPricing] = useState<ModelPricing | null>(null);
+
+  const codeRef = useRef(code);
   const selectionRef = useRef<EditorSelection | null>(currentSelection ?? null);
 
   useEffect(() => {
@@ -83,12 +97,25 @@ export function AIChat({
   }, []);
 
   useEffect(() => {
-    projectRef.current = project;
-  }, [project]);
+    codeRef.current = code;
+  }, [code]);
 
   useEffect(() => {
     selectionRef.current = currentSelection ?? null;
   }, [currentSelection]);
+
+  useEffect(() => {
+    let active = true;
+    setPricing(null);
+    if (settings.model) {
+      getModelPricing(settings.model).then((res) => {
+        if (active) setPricing(res);
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, [settings.model]);
 
   const agent = useMemo(() => {
     if (!settings.apiKey.trim()) return null;
@@ -97,11 +124,11 @@ export function AIChat({
       apiKey: settings.apiKey,
       model: settings.model,
       useWebSearch,
-      getCurrentProject: () => projectRef.current,
+      getCurrentCode: () => codeRef.current,
       getCurrentSelection: () => selectionRef.current,
-      onProjectMutation,
+      onCodeChange,
     });
-  }, [onProjectMutation, settings.apiKey, settings.model, useWebSearch]);
+  }, [onCodeChange, settings.apiKey, settings.model, useWebSearch]);
 
   const transport = useMemo(() => {
     if (!agent) return null;
@@ -111,6 +138,15 @@ export function AIChat({
   const { messages, sendMessage, status, error } = useChat({
     transport: transport ?? undefined,
   });
+
+  const { inputTokens, outputTokens, reasoningTokens, cachedInputTokens } = useMemo(() => {
+    return accumulateConversationUsage(messages);
+  }, [messages]);
+
+  const totalTokens = inputTokens + outputTokens;
+  const hasUsageMetadata = messages.length > 0 && totalTokens > 0;
+  const estimatedCost =
+    pricing && hasUsageMetadata ? calculateCost(pricing, inputTokens, outputTokens) : undefined;
 
   const hasApiKey = Boolean(settings.apiKey.trim());
 
@@ -138,6 +174,64 @@ export function AIChat({
         </div>
       </div>
 
+      {pricing?.contextWindow ? (
+        <Context
+          maxTokens={pricing.contextWindow}
+          modelId={settings.model}
+          usedTokens={totalTokens}
+          usage={{
+            inputTokens,
+            inputTokenDetails: {
+              noCacheTokens: Math.max(0, inputTokens - cachedInputTokens),
+              cacheReadTokens: cachedInputTokens,
+              cacheWriteTokens: undefined,
+            },
+            outputTokens,
+            outputTokenDetails: {
+              textTokens: Math.max(0, outputTokens - reasoningTokens),
+              reasoningTokens,
+            },
+            totalTokens,
+            reasoningTokens,
+            cachedInputTokens,
+          }}
+        >
+          <ContextTrigger
+            aria-label="Show conversation context usage"
+            className="w-full justify-between rounded-none border-b px-4 py-2"
+          />
+          <ContextContent align="start">
+            <ContextContentHeader />
+            <ContextContentBody>
+              <div className="mb-2 truncate text-xs font-medium" title={settings.model}>
+                {settings.model}
+              </div>
+              <div className="space-y-1">
+                <ContextInputUsage />
+                <ContextOutputUsage />
+                <ContextReasoningUsage />
+                <ContextCacheUsage />
+                {!hasUsageMetadata ? (
+                  <p className="text-xs text-muted-foreground">Token usage unavailable</p>
+                ) : null}
+              </div>
+            </ContextContentBody>
+            <ContextContentFooter>
+              <span className="text-muted-foreground">Estimated cost</span>
+              <span>{estimatedCost == null ? "Unavailable" : `$${estimatedCost.toFixed(4)}`}</span>
+            </ContextContentFooter>
+          </ContextContent>
+        </Context>
+      ) : (
+        <div
+          className="flex items-center gap-3 border-b px-4 py-2 text-xs text-muted-foreground"
+          aria-label="Conversation context usage unavailable"
+        >
+          <span className="max-w-40 truncate font-medium">{settings.model}</span>
+          <span>Context usage unavailable</span>
+        </div>
+      )}
+
       <Conversation>
         <ConversationContent>
           {messages.length === 0 ? (
@@ -153,7 +247,9 @@ export function AIChat({
                   <MessageContent className="bg-primary text-primary-foreground">
                     {message.parts.map((part, index) =>
                       isTextUIPart(part) ? (
-                        <MessageResponse key={`${message.id}-${index}`}>{part.text}</MessageResponse>
+                        <MessageResponse key={`${message.id}-${index}`}>
+                          {part.text}
+                        </MessageResponse>
                       ) : null,
                     )}
                   </MessageContent>
@@ -178,7 +274,10 @@ export function AIChat({
                       const toolName = getToolName(part);
 
                       return (
-                        <div key={`${message.id}-${index}`} className="my-1.5 flex w-fit items-center gap-2 rounded-md border border-border/50 bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground shadow-sm">
+                        <div
+                          key={`${message.id}-${index}`}
+                          className="my-1.5 flex w-fit items-center gap-2 rounded-md border border-border/50 bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground shadow-sm"
+                        >
                           <Bot className="size-3.5 opacity-70" />
                           <span className="font-mono">{toolName}</span>
                           {part.state === "input-streaming" ? (
@@ -201,7 +300,11 @@ export function AIChat({
           {status === "submitted" || status === "streaming" ? (
             <div className="max-w-[85%] px-1 text-sm text-muted-foreground">Thinking...</div>
           ) : null}
-          {error ? <div className="max-w-[85%] px-1 text-sm text-red-500">{error.message}</div> : null}
+          {error ? (
+            <div className="bg-destructive/10 text-destructive max-w-[95%] rounded-md px-3 py-2 text-sm">
+              {formatChatError(error)}
+            </div>
+          ) : null}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
@@ -248,6 +351,36 @@ export function AIChat({
     </div>
   );
 }
+
+function formatChatError(error: Error) {
+  const message = error.message || "The assistant request failed.";
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes("401") ||
+    normalized.includes("unauthorized") ||
+    normalized.includes("invalid api")
+  ) {
+    return "OpenRouter rejected the API key. Check it in Settings and try again.";
+  }
+  if (normalized.includes("429") || normalized.includes("rate limit")) {
+    return "OpenRouter rate-limited this request. Wait a moment and try again.";
+  }
+  if (
+    normalized.includes("404") ||
+    normalized.includes("model not found") ||
+    normalized.includes("not available")
+  ) {
+    return "The selected model is unavailable. Choose another model in the selector and try again.";
+  }
+  if (normalized.includes("timeout") || normalized.includes("timed out")) {
+    return "The assistant timed out. Try a shorter request or try again.";
+  }
+  if (normalized.includes("network") || normalized.includes("failed to fetch")) {
+    return "The assistant could not reach OpenRouter. Check your connection and try again.";
+  }
+  return message;
+}
+
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
 

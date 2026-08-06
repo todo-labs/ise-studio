@@ -1,81 +1,53 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  createDebouncedProjectSave,
-  createWorkspaceProject,
-  getStudioWorkspaceView,
-  loadStudioWorkspace,
-  mutateWorkspaceActiveProject,
-  persistActiveWorkspaceProjectId,
-  selectWorkspaceProject,
-  saveProject,
-  type ProjectMutation,
-  type StudioWorkspace,
-} from "@ise-studio/project";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { decodeCodeShareHash } from "./file-io";
 
-export function useStudioWorkspace() {
-  const [workspace, setWorkspace] = useState<StudioWorkspace>({ projects: [], activeProjectId: "" });
-  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
-  const [isSavingProject, setIsSavingProject] = useState(false);
-  const didLoadProjectsRef = useRef(false);
-  const debouncedSaveRef = useRef(createDebouncedProjectSave(saveProject));
+export const STORAGE_KEY = "ise-studio-code";
+export const SAVE_DELAY_MS = 500;
 
-  const workspaceView = useMemo(() => getStudioWorkspaceView(workspace), [workspace]);
-  const { projects, activeProjectId, activeProject, activeFile, activeTextFile } = workspaceView;
+export const DEFAULT_CODE = `// OpenSCAD: hollow cube shell
+difference() {
+  cube([40, 40, 40], center=true);
+  translate([0, 0, 4])
+    cube([32, 32, 32], center=true);
+}`;
+
+export function loadCode(storage?: Pick<Storage, "getItem">): string {
+  const source = storage ?? (typeof window === "undefined" ? undefined : window.localStorage);
+  try {
+    const sharedCode = typeof window === "undefined" ? null : decodeCodeShareHash(window.location.hash);
+    if (sharedCode != null) return sharedCode;
+    return source?.getItem(STORAGE_KEY) ?? DEFAULT_CODE;
+  } catch {
+    return DEFAULT_CODE;
+  }
+}
+
+export function persistCode(code: string, storage?: Pick<Storage, "setItem">): boolean {
+  const target = storage ?? (typeof window === "undefined" ? undefined : window.localStorage);
+  try {
+    target?.setItem(STORAGE_KEY, code);
+    return Boolean(target);
+  } catch (err) {
+    console.error("Failed to save code:", err);
+    return false;
+  }
+}
+
+export function useSingleFile() {
+  const [code, setCode] = useState(loadCode);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    void loadStudioWorkspace().then((loadedWorkspace) => {
-      if (cancelled) return;
-      setWorkspace(loadedWorkspace);
-      setIsLoadingProjects(false);
-      didLoadProjectsRef.current = true;
-    });
-
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => persistCode(code), SAVE_DELAY_MS);
     return () => {
-      cancelled = true;
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
+  }, [code]);
+
+  const handleCodeChange = useCallback((newCode: string) => {
+    setCode(newCode);
   }, []);
 
-  useEffect(() => {
-    if (!didLoadProjectsRef.current || !activeProject) return;
-    setIsSavingProject(true);
-    debouncedSaveRef.current.schedule(activeProject, () => setIsSavingProject(false));
-    return () => {
-      debouncedSaveRef.current.cancel();
-    };
-  }, [activeProject]);
-
-  const mutateActiveProject = useCallback((mutation: ProjectMutation) => {
-    setWorkspace((previousWorkspace) => mutateWorkspaceActiveProject(previousWorkspace, mutation));
-  }, []);
-
-  const selectProject = useCallback((projectId: string) => {
-    setWorkspace((previousWorkspace) => {
-      const nextWorkspace = selectWorkspaceProject(previousWorkspace, projectId);
-      persistActiveWorkspaceProjectId(nextWorkspace.activeProjectId);
-      return nextWorkspace;
-    });
-  }, []);
-
-  const createProject = useCallback(() => {
-    setWorkspace((previousWorkspace) => {
-      const next = createWorkspaceProject(previousWorkspace);
-      persistActiveWorkspaceProjectId(next.project.id);
-      void saveProject(next.project);
-      return next.workspace;
-    });
-  }, []);
-
-  return {
-    projects,
-    activeProjectId,
-    activeProject,
-    activeFile,
-    activeTextFile,
-    isLoadingProjects,
-    isSavingProject,
-    mutateActiveProject,
-    selectProject,
-    createProject,
-  };
+  return { code, setCode: handleCodeChange };
 }

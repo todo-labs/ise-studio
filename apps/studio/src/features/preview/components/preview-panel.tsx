@@ -1,194 +1,137 @@
-import { useCallback, useState } from "react";
-import { AlertCircle, Download, Eye, FileCode, Loader2, Play, Square } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Download, Loader2, Play, RotateCcw, TriangleAlert } from "lucide-react";
 
+import { Badge } from "@ise-studio/ui/badge";
 import { Button } from "@ise-studio/ui/button";
-import { Separator } from "@ise-studio/ui/separator";
-import { Toggle } from "@ise-studio/ui/toggle";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@ise-studio/ui/tooltip";
-import type { ProjectFile } from "@ise-studio/project";
-
-import { ExportModal } from "./export-modal";
+import { cn } from "@ise-studio/ui/utils";
 import { SCADViewer } from "./scad-viewer";
+import { ExportModal } from "./export-modal";
 import { usePreviewWorkflow } from "../preview-workflow";
+import { CustomizerPanel } from "./customizer-panel";
+import { COMPILE_PREVIEW_EVENT } from "@ise-studio/ui/studio-events";
 
 interface PreviewPanelProps {
-  files: ProjectFile[];
-  entryPath: string | null;
+  code: string;
   fileName: string;
-  autoPreview?: boolean;
+  onCodeChange: (code: string) => void;
+  onSuccessfulCompile?: () => void;
 }
 
-export function PreviewPanel({
-  files,
-  entryPath,
-  fileName,
-  autoPreview = true,
-}: PreviewPanelProps) {
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const preview = usePreviewWorkflow({ files, entryPath, fileName, autoPreview });
+export function PreviewPanel({ code, fileName, onCodeChange, onSuccessfulCompile }: PreviewPanelProps) {
+  const [showExport, setShowExport] = useState(false);
+  const [viewerError, setViewerError] = useState<string | null>(null);
+  const source = useMemo(() => ({ path: fileName, content: code }), [code, fileName]);
+  const workflow = usePreviewWorkflow({
+    source,
+    fileName,
+    autoPreview: true,
+  });
+  const reportViewerError = useCallback((message: string) => setViewerError(message), []);
 
-  const handleExportSTL = () => {
-    if (!preview.canExport) {
-      preview.setError("Nothing to export");
-      return;
-    }
-    setIsExportModalOpen(true);
-  };
+  useEffect(() => {
+    const compile = () => void workflow.renderPreview();
+    window.addEventListener(COMPILE_PREVIEW_EVENT, compile);
+    return () => {
+      window.removeEventListener(COMPILE_PREVIEW_EVENT, compile);
+    };
+  }, [workflow.exportSCAD, workflow.renderPreview]);
 
-  const handleError = useCallback((message: string) => {
-    preview.setError(message);
-  }, [preview]);
+  useEffect(() => {
+    if (workflow.lastCompiledAt) onSuccessfulCompile?.();
+  }, [onSuccessfulCompile, workflow.lastCompiledAt]);
 
   return (
-    <div className="bg-background flex h-full flex-col">
-      <ExportModal
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
-        operation={preview.exportSTLOperation}
-      />
-      <div className="bg-muted/30 flex items-center justify-between border-b p-2">
-        <div className="flex items-center space-x-2">
-          <Eye className="h-4 w-4" />
+    <div className="bg-muted/10 flex h-full min-w-0 flex-col">
+      <CustomizerPanel code={code} onCodeChange={onCodeChange} />
+      <div className="flex items-center justify-between border-b px-3 py-2">
+        <div className="flex items-center gap-2">
           <span className="text-sm font-medium">Preview</span>
+          {workflow.isCompiling && <Badge variant="secondary">Compiling</Badge>}
+          {workflow.isWasmReady && !workflow.isCompiling && <Badge variant="outline">WASM ready</Badge>}
         </div>
-
-        <div className="flex items-center space-x-1">
-          <Toggle
-            pressed={preview.showWireframe}
-            onPressedChange={preview.setShowWireframe}
-            size="sm"
-            aria-label="Toggle wireframe"
+        <div className="flex items-center gap-1">
+          <Button
+            aria-label="Compile preview"
+            disabled={!workflow.canRender || workflow.isCompiling}
+            onClick={() => void workflow.renderPreview()}
+            size="icon"
+            title="Compile preview"
+            variant="ghost"
           >
-            <Square className="h-4 w-4" />
-          </Toggle>
-
-          <Separator orientation="vertical" className="h-6" />
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  aria-label={preview.isCompiling ? "Rendering..." : "Render (F5)"}
-                  disabled={preview.isCompiling || !preview.canRender}
-                  onClick={preview.renderPreview}
-                  size="icon"
-                  variant="default"
-                >
-                  {preview.isCompiling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{preview.isCompiling ? "Rendering..." : "Render (F5)"}</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  aria-label="Export .scad"
-                  disabled={!entryPath}
-                  onClick={preview.exportSCAD}
-                  size="icon"
-                  variant="outline"
-                >
-                  <FileCode className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Export .scad</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  aria-label="Export .stl"
-                  disabled={!entryPath || preview.isCompiling}
-                  onClick={handleExportSTL}
-                  size="icon"
-                  variant="outline"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Export .stl</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+            {workflow.isCompiling ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
+          </Button>
+          <Button
+            aria-label="Export OpenSCAD source"
+            disabled={!workflow.canExport}
+            onClick={workflow.exportSCAD}
+            size="icon"
+            title="Export .scad"
+            variant="ghost"
+          >
+            <Download className="size-4" />
+          </Button>
+          <Button
+            aria-label="Export STL"
+            disabled={!workflow.canExport || workflow.isCompiling}
+            onClick={() => setShowExport(true)}
+            size="icon"
+            title="Export .stl"
+            variant="ghost"
+          >
+            <RotateCcw className="size-4" />
+          </Button>
+          <Button
+            aria-label="Toggle wireframe"
+            aria-pressed={workflow.showWireframe}
+            onClick={() => workflow.setShowWireframe((current) => !current)}
+            size="icon"
+            title="Toggle wireframe"
+            variant={workflow.showWireframe ? "secondary" : "ghost"}
+          >
+            <span className="text-xs">WF</span>
+          </Button>
         </div>
       </div>
 
-      {preview.error && (
-        <div className="bg-destructive/10 border-b p-2">
-          <div className="flex items-start space-x-2">
-            <AlertCircle className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
-            <pre className="text-destructive whitespace-pre-wrap text-xs">{preview.error}</pre>
+      {workflow.error || viewerError ? (
+        <div className="border-b border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          <div className="flex gap-2">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+            <pre className="max-h-28 overflow-auto whitespace-pre-wrap font-sans">
+              {workflow.error ?? viewerError}
+            </pre>
           </div>
+        </div>
+      ) : null}
+
+      <div className={cn("relative min-h-0 flex-1", !workflow.geometryData && "grid place-items-center")}>
+        {workflow.geometryData ? (
+          <SCADViewer
+            geometryData={workflow.geometryData}
+            geometryFormat={workflow.geometryFormat}
+            onError={reportViewerError}
+            showWireframe={workflow.showWireframe}
+          />
+        ) : (
+          <p className="text-muted-foreground px-6 text-center text-sm">
+            {workflow.isCompiling ? "Compiling OpenSCAD…" : "Compile a model to see its preview."}
+          </p>
+        )}
+      </div>
+
+      {workflow.lastCompiledAt && (
+        <div className="text-muted-foreground border-t px-3 py-1.5 text-right text-[11px]">
+          Last successful compile {workflow.lastCompiledAt.toLocaleTimeString()}
         </div>
       )}
 
-      <div className="relative flex min-h-0 flex-1 flex-col">
-        {!entryPath ? (
-          <div className="text-muted-foreground flex h-full flex-col items-center justify-center">
-            <div className="space-y-4 text-center">
-              <div className="bg-muted mx-auto flex h-16 w-16 items-center justify-center rounded-full">
-                <Eye className="h-8 w-8" />
-              </div>
-              <div>
-                <h3 className="text-foreground mb-2 text-lg font-medium">No .scad File Selected</h3>
-                <p className="mb-4 text-sm">Select or create an OpenSCAD file to render the project.</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="m-2 flex min-h-0 flex-1 overflow-hidden rounded-lg border bg-background">
-            <div className="relative min-h-0 w-full flex-1">
-              <SCADViewer
-                data={preview.geometryData}
-                format={preview.geometryFormat}
-                showWireframe={preview.showWireframe}
-                className="h-full min-h-0 w-full"
-                onError={handleError}
-              />
-              {preview.isCompiling && (
-                <div className="bg-background/80 absolute inset-0 flex items-center justify-center">
-                  <div className="flex flex-col items-center space-y-2">
-                    <Loader2 className="h-8 w-8 animate-spin" />
-                    <p className="text-sm">
-                      {preview.isWasmReady ? "Rendering with OpenSCAD..." : "Loading OpenSCAD WASM engine..."}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-muted/30 border-t p-3 text-xs text-muted-foreground">
-        {preview.lastCompiledAt ? (
-          <div className="flex items-center justify-between">
-            <span>
-              Last rendered:{" "}
-              {preview.lastCompiledAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </span>
-            <div className="flex items-center space-x-3">
-              {autoPreview && <span>Auto-preview on</span>}
-              {preview.showWireframe && <span>Wireframe enabled</span>}
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <span>
-              {autoPreview
-                ? "Auto-preview enabled - code changes will render automatically."
-                : "Hit Render to update the view."}
-            </span>
-            {preview.showWireframe && <span>Wireframe enabled</span>}
-          </div>
-        )}
-      </div>
+      <ExportModal
+        isOpen={showExport}
+        onClose={() => setShowExport(false)}
+        operation={workflow.exportSTLOperation}
+      />
     </div>
   );
 }
+
+export const STLPreviewPanel = PreviewPanel;

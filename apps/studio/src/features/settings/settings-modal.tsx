@@ -38,6 +38,7 @@ import {
   type EditorSettings,
 } from "@ise-studio/editor";
 import { DEFAULT_DARK_PRESET_ID, THEME_PRESETS, type ThemePresetId } from "@ise-studio/ui/theme";
+import { OPEN_SETTINGS_EVENT } from "@ise-studio/ui/studio-events";
 
 export function SettingsModal() {
   const [apiKey, setApiKey] = useState("");
@@ -60,6 +61,12 @@ export function SettingsModal() {
   const updateEditorSetting = <K extends keyof EditorSettings>(key: K, value: EditorSettings[K]) => {
     updateEditorSettings({ ...editorSettings, [key]: value });
   };
+
+  useEffect(() => {
+    const openFromCommand = () => setIsOpen(true);
+    window.addEventListener(OPEN_SETTINGS_EVENT, openFromCommand);
+    return () => window.removeEventListener(OPEN_SETTINGS_EVENT, openFromCommand);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
