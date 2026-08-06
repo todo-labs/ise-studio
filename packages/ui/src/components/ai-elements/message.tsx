@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Streamdown } from "streamdown";
+import DOMPurify from "dompurify";
 
 import { Button } from "../../components/ui/button";
 import { cn } from "../../lib/utils";
@@ -46,6 +47,10 @@ function MessageResponse({ children, className }: { children: string; className?
 }
 
 export function sanitizeMarkdown(markdown: string) {
+  const sanitizeLine =
+    typeof window === "undefined"
+      ? (line: string) => line.replace(/<\/?[a-z][^>]*>/gi, "")
+      : (line: string) => DOMPurify.sanitize(line, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
   let inCodeFence = false;
   return markdown
     .split("\n")
@@ -54,7 +59,7 @@ export function sanitizeMarkdown(markdown: string) {
         inCodeFence = !inCodeFence;
         return line;
       }
-      return inCodeFence ? line : line.replace(/<\/?[a-z][^>]*>/gi, "");
+      return inCodeFence ? line : sanitizeLine(line);
     })
     .join("\n");
 }
