@@ -16,7 +16,9 @@ try {
   await page.addInitScript(() => {
     delete window.showSaveFilePicker;
   });
-  await page.goto(baseUrl, { waitUntil: "networkidle", timeout: 30_000 });
+  // Vite keeps an HMR connection open in development, so networkidle never
+  // settles reliably. The assertions below wait for the actual app states.
+  await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
 
   const onboardingClose = page.getByRole("button", { name: "Close" }).last();
   if (await onboardingClose.isVisible().catch(() => false)) {
@@ -34,7 +36,7 @@ try {
   }
 
   await page.evaluate(() => localStorage.setItem("ise-studio-code", "sphere(2);"));
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByText("sphere(2);").waitFor({ state: "visible", timeout: 10_000 });
 
   await openCommandPalette(page);
