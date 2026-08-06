@@ -45,7 +45,7 @@ function MessageResponse({ children, className }: { children: string; className?
   );
 }
 
-function sanitizeMarkdown(markdown: string) {
+export function sanitizeMarkdown(markdown: string) {
   let inCodeFence = false;
   return markdown
     .split("\n")
