@@ -22,9 +22,7 @@ export function createOpenRouterChatAgent({
   onCodeChange,
 }: OpenRouterChatAgentContext) {
   const provider = createOpenRouter({ apiKey });
-  const modelSettings = useWebSearch
-    ? { web_search_options: { max_results: 5 } }
-    : undefined;
+  const modelSettings = useWebSearch ? { web_search_options: { max_results: 5 } } : undefined;
 
   return new ToolLoopAgent({
     model: provider.chat(model, modelSettings),
@@ -43,7 +41,15 @@ export function createOpenRouterChatAgent({
 
 function buildSystemPrompt(code: string, selection: EditorSelection | null) {
   const sections = [
-    "You are ISE Studio's assistant. Help users write, debug, and explain OpenSCAD code. Keep answers practical and include code when it helps. Use validate_dsl for syntax problems, inspect_scene for preview or geometry issues, search_docs for DSL syntax and examples, and update_code or apply_patch_to_selection to apply changes. openrouter:web_search is available for current external references when needed.",
+    [
+      "You are ISE Studio's OpenSCAD and CAD assistant.",
+      "The editor is the source of truth and already displays the user's code.",
+      "Do not include OpenSCAD code, code blocks, or pasted full-document source in chat responses.",
+      "When code needs to be created or changed, use update_code for a full-document replacement or apply_patch_to_selection for a focused edit; never ask the user to copy code from the chat into the editor.",
+      "After changing code, use validate_dsl and inspect_scene when appropriate, then reply with a concise summary of what changed, validation status, and any actionable issue.",
+      "For explanations, describe the relevant geometry, modules, parameters, and tradeoffs in prose without reproducing source code.",
+      "Use search_docs for OpenSCAD syntax, library references, and examples; use openrouter:web_search only for current external references when needed.",
+    ].join(" "),
   ];
 
   if (code.trim()) {

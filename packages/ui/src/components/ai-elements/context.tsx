@@ -6,11 +6,7 @@ import type { ComponentProps } from "react";
 import { createContext, useContext, useMemo } from "react";
 
 import { Button } from "../ui/button";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "../ui/hover-card";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "../ui/hover-card";
 import { Progress } from "../ui/progress";
 import { cn } from "../../lib/utils";
 
@@ -37,13 +33,7 @@ function useContextValue() {
 
 export type ContextProps = ComponentProps<typeof HoverCard> & ContextSchema;
 
-export function Context({
-  usedTokens,
-  maxTokens,
-  usage,
-  modelId,
-  ...props
-}: ContextProps) {
+export function Context({ usedTokens, maxTokens, usage, modelId, ...props }: ContextProps) {
   const contextValue = useMemo(
     () => ({ maxTokens, modelId, usage, usedTokens }),
     [maxTokens, modelId, usage, usedTokens],
@@ -129,7 +119,10 @@ export type ContextContentProps = ComponentProps<typeof HoverCardContent>;
 
 export function ContextContent({ className, ...props }: ContextContentProps) {
   return (
-    <HoverCardContent className={cn("min-w-60 divide-y overflow-hidden p-0", className)} {...props} />
+    <HoverCardContent
+      className={cn("min-w-60 divide-y overflow-hidden p-0", className)}
+      {...props}
+    />
   );
 }
 
@@ -301,7 +294,8 @@ export function ContextCacheUsage({ className, children, ...props }: ContextCach
   if (!cacheTokens) return null;
 
   const cacheCost = modelId
-    ? getUsage({ modelId, usage: { cacheReads: cacheTokens, input: 0, output: 0 } }).costUSD?.totalUSD
+    ? getUsage({ modelId, usage: { cacheReads: cacheTokens, input: 0, output: 0 } }).costUSD
+        ?.totalUSD
     : undefined;
   const cacheCostText = new Intl.NumberFormat("en-US", {
     currency: "USD",
