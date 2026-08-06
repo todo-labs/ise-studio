@@ -24,10 +24,11 @@ Built with [**Vite**](https://vitejs.dev/), [**React 19**](https://reactjs.org/)
 - AI Elements context usage bar with model, tokens, context limit, and estimated cost
 - Bring your own API key (no backend required)
 - Agentic function calling for intelligent code suggestions
+- AI Elements tool invocation panels with expandable parameters, results, and errors
 
 🎨 **Modern UI**
 
-- Built with shadcn/ui components  
+- Built with shadcn/ui components
 - Dark/light theme support
 - Keyboard shortcuts (Ctrl+Shift+C for chat toggle, F5 for render)
 - Accessible and responsive design
@@ -96,6 +97,9 @@ ISE Studio uses a client-first architecture:
 - **Parametric Customizer**: Annotate assignments with ranges or option lists and edit them without leaving the preview
 - **Offline Shell**: Installable PWA caching the editor shell, WASM compiler, and commonly used bundled libraries
 - **Keyboard Workflow**: Command palette with import/export, formatting, library insertion, and preview commands
+- **Visual authoring**: Primitive blocks generate editable OpenSCAD source
+- **STL reverse engineering**: Import an STL and generate a local parametric approximation
+- **Extension seam**: Load trusted command extensions through the command palette
 
 ## Tech Stack
 
@@ -160,6 +164,9 @@ The AI assistant can chain these tools together to help you write, debug, and op
 - [x] Custom themes and editor configurations
 - [x] Performance profiling and optimization tips
 - [x] GPU-accelerated preview for complex models (opt in with `?renderer=webgpu`; WebGL remains the default)
+- [x] Visual block mode for primitive-based OpenSCAD generation
+- [x] Local STL reverse engineering into editable OpenSCAD approximations
+- [x] Trusted plugin module loading and command registration
 
 ## Contributing
 
