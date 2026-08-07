@@ -1,11 +1,14 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Bot, CheckIcon, CopyIcon, GlobeIcon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Bot, CheckIcon, CopyIcon, GlobeIcon, Trash2Icon } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import {
   DirectChatTransport,
+  type InferUITools,
+  isReasoningUIPart,
   isTextUIPart,
   isToolUIPart,
   type ChatStatus,
+  type LanguageModelUsage,
   type UIMessage,
 } from "ai";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -61,7 +64,13 @@ import {
   ToolOutput,
 } from "@ise-studio/ui/ai-elements/tool";
 import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from "@ise-studio/ui/ai-elements/reasoning";
+import {
   createOpenRouterChatAgent,
+  createOpenRouterAssistantTools,
   accumulateConversationUsage,
   calculateCost,
   getModelPricing,
@@ -77,6 +86,22 @@ import {
   type AISettings,
 } from "@ise-studio/ai";
 import { cn } from "@ise-studio/ui/utils";
+import { Button } from "@ise-studio/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@ise-studio/ui/alert-dialog";
+import {
+  clearConversationMessages,
+  loadConversationMessages,
+  persistConversationMessages,
+} from "../conversation-storage";
 
 interface AIChatProps {
   isOpen: boolean;
@@ -87,6 +112,11 @@ interface AIChatProps {
 }
 
 const MAX_CONVERSATION_MESSAGES = 50;
+type AssistantUIMessage = UIMessage<
+  { usage?: LanguageModelUsage },
+  never,
+  InferUITools<ReturnType<typeof createOpenRouterAssistantTools>>
+>;
 
 export function AIChat({
   isOpen,
@@ -103,6 +133,10 @@ export function AIChat({
   );
   const [useWebSearch, setUseWebSearch] = useState(false);
   const [pricing, setPricing] = useState<ModelPricing | null>(null);
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+  const [initialMessages] = useState<AssistantUIMessage[]>(
+    loadConversationMessages<AssistantUIMessage>,
+  );
 
   const codeRef = useRef(code);
   const selectionRef = useRef<EditorSelection | null>(currentSelection ?? null);
@@ -149,12 +183,31 @@ export function AIChat({
 
   const transport = useMemo(() => {
     if (!agent) return null;
-    return new DirectChatTransport({ agent });
+    return new DirectChatTransport({
+      agent,
+      messageMetadata: ({ part }) =>
+        part.type === "finish" ? { usage: part.totalUsage } : undefined,
+    });
   }, [agent]);
 
-  const { messages, setMessages, sendMessage, status, error } = useChat({
+  const { messages, setMessages, sendMessage, stop, status, error } = useChat({
+    messages: initialMessages,
+    onFinish: ({ messages: completedMessages }) => {
+      persistConversationMessages(completedMessages);
+    },
     transport: transport ?? undefined,
   });
+
+  useEffect(() => {
+    if (status === "ready" && messages.length > 0) persistConversationMessages(messages);
+  }, [messages, status]);
+
+  const handleClearConversation = () => {
+    stop();
+    clearConversationMessages();
+    setMessages([]);
+    setIsClearDialogOpen(false);
+  };
 
   useEffect(() => {
     if (status !== "ready" || messages.length <= MAX_CONVERSATION_MESSAGES) return;
@@ -194,7 +247,35 @@ export function AIChat({
           <Bot className="h-5 w-5" />
           <span className="text-sm font-medium">AI Assistant</span>
         </div>
+        <Button
+          aria-label="Clear chat"
+          disabled={messages.length === 0}
+          onClick={() => setIsClearDialogOpen(true)}
+          size="icon"
+          type="button"
+          variant="ghost"
+        >
+          <Trash2Icon className="size-4" />
+        </Button>
       </div>
+
+      <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear this conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the assistant chat history from this browser. Your code and
+              CAD model will not be changed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearConversation} variant="destructive">
+              Clear chat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {pricing?.contextWindow ? (
         <Context
@@ -332,8 +413,19 @@ function VirtualizedConversationMessages({
     overscan: 4,
   });
 
-  useLayoutEffect(() => {
-    setScrollElement(scrollRef.current);
+  useEffect(() => {
+    let frame = 0;
+
+    const resolveScrollElement = () => {
+      if (scrollRef.current) {
+        setScrollElement(scrollRef.current);
+        return;
+      }
+      frame = requestAnimationFrame(resolveScrollElement);
+    };
+
+    frame = requestAnimationFrame(resolveScrollElement);
+    return () => cancelAnimationFrame(frame);
   }, [scrollRef]);
 
   return (
@@ -351,14 +443,25 @@ function VirtualizedConversationMessages({
             style={{ transform: `translateY(${item.start}px)` }}
           >
             {item.index < messages.length ? (
-              <ConversationMessage message={messages[item.index]!} />
+              <ConversationMessage
+                isLastMessage={item.index === messages.length - 1}
+                isStreaming={isThinking}
+                message={messages[item.index]!}
+              />
             ) : null}
             {isThinkingItem ? (
               <div className="max-w-[85%] px-1 text-sm text-muted-foreground">Thinking...</div>
             ) : null}
             {isErrorItem ? (
-              <div className="bg-destructive/10 text-destructive max-w-[95%] rounded-md px-3 py-2 text-sm">
-                {formatChatError(error)}
+              <div className="space-y-2">
+                <Message from="assistant">
+                  <MessageContent>
+                    <MessageResponse>{getFallbackResponse(error)}</MessageResponse>
+                  </MessageContent>
+                </Message>
+                <div className="bg-destructive/10 text-destructive max-w-[95%] rounded-md px-3 py-2 text-sm">
+                  {formatChatError(error)}
+                </div>
               </div>
             ) : null}
           </div>
@@ -368,7 +471,15 @@ function VirtualizedConversationMessages({
   );
 }
 
-function ConversationMessage({ message }: { message: UIMessage }) {
+function ConversationMessage({
+  isLastMessage,
+  isStreaming,
+  message,
+}: {
+  isLastMessage: boolean;
+  isStreaming: boolean;
+  message: UIMessage;
+}) {
   return (
     <div className="space-y-3">
       {message.role === "user" ? (
@@ -383,6 +494,20 @@ function ConversationMessage({ message }: { message: UIMessage }) {
         </Message>
       ) : (
         <div className="group space-y-3 px-1 text-sm leading-6">
+          {(() => {
+            const reasoningParts = message.parts.filter(isReasoningUIPart);
+            if (reasoningParts.length === 0) return null;
+            const reasoningText = reasoningParts.map((part) => part.text).join("\n\n");
+            const lastPart = message.parts.at(-1);
+            const isReasoningStreaming =
+              isLastMessage && isStreaming && lastPart?.type === "reasoning";
+            return (
+              <Reasoning isStreaming={isReasoningStreaming}>
+                <ReasoningTrigger />
+                <ReasoningContent>{reasoningText}</ReasoningContent>
+              </Reasoning>
+            );
+          })()}
           {message.parts.map((part, index) => {
             if (isTextUIPart(part)) {
               return (
@@ -399,10 +524,7 @@ function ConversationMessage({ message }: { message: UIMessage }) {
 
             if (part.type === "dynamic-tool" || isToolUIPart(part)) {
               return (
-                <Tool
-                  key={`${message.id}-${index}`}
-                  defaultOpen={part.state === "output-error" || part.state === "output-available"}
-                >
+                <Tool key={`${message.id}-${index}`} defaultOpen={part.state === "output-error"}>
                   {part.type === "dynamic-tool" ? (
                     <ToolHeader type={part.type} toolName={part.toolName} state={part.state} />
                   ) : (
@@ -451,6 +573,17 @@ function formatChatError(error: Error) {
     return "The assistant could not reach OpenRouter. Check your connection and try again.";
   }
   return message;
+}
+
+function getFallbackResponse(error: Error) {
+  const message = formatChatError(error).toLowerCase();
+  if (message.includes("selected model is unavailable")) {
+    return "I can’t reach the selected model right now. Choose another model from the selector and try again.";
+  }
+  if (message.includes("api key")) {
+    return "I’m ready to help, but the OpenRouter API key needs attention. Check it in Settings and try again.";
+  }
+  return "I couldn’t complete that request right now. Your code is safe—please try again or choose another model.";
 }
 
 function CopyButton({ text }: { text: string }) {

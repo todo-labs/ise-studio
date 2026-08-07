@@ -26,3 +26,30 @@ test("conversation usage preserves reasoning and cached input tokens", () => {
     ]),
   ).toEqual({ inputTokens: 100, outputTokens: 20, reasoningTokens: 6, cachedInputTokens: 40 });
 });
+
+test("conversation usage reads AI SDK finish parts from direct agent messages", () => {
+  expect(
+    accumulateConversationUsage([
+      {
+        role: "assistant",
+        parts: [
+          { type: "finish-step", usage: { inputTokens: 12, outputTokens: 4 } },
+          { type: "finish", totalUsage: { inputTokens: 20, outputTokens: 7 } },
+        ],
+      },
+    ]),
+  ).toEqual({ inputTokens: 20, outputTokens: 7, reasoningTokens: 0, cachedInputTokens: 0 });
+});
+
+test("conversation usage sums finish-step parts when no final total is present", () => {
+  expect(
+    accumulateConversationUsage([
+      {
+        parts: [
+          { type: "finish-step", usage: { inputTokens: 12, outputTokens: 4 } },
+          { type: "finish-step", usage: { inputTokens: 8, outputTokens: 3 } },
+        ],
+      },
+    ]),
+  ).toEqual({ inputTokens: 20, outputTokens: 7, reasoningTokens: 0, cachedInputTokens: 0 });
+});
