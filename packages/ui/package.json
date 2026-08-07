@@ -18,6 +18,7 @@
     "./ai-elements/message": "./src/components/ai-elements/message.tsx",
     "./ai-elements/model-selector": "./src/components/ai-elements/model-selector.tsx",
     "./ai-elements/prompt-input": "./src/components/ai-elements/prompt-input.tsx",
+    "./ai-elements/reasoning": "./src/components/ai-elements/reasoning.tsx",
     "./ai-elements/tool": "./src/components/ai-elements/tool.tsx",
     "./badge": "./src/components/ui/badge.tsx",
     "./button": "./src/components/ui/button.tsx",
