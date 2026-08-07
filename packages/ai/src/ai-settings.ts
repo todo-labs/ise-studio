@@ -27,7 +27,7 @@ export const OPENROUTER_PROVIDER = {
   placeholder: "sk-or-...",
   keyName: "openrouter_api_key",
   modelKey: "openrouter_model",
-  defaultModel: "deepseek/deepseek-v4-flash",
+  defaultModel: "openai/gpt-5.6-luna",
 } as const;
 
 export interface AISettings {
