@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { sanitizeMarkdown } from "./message";
+import { sanitizeMarkdown } from "../components/ai-elements/message";
 
 test("strips raw HTML from assistant markdown while preserving fenced code", () => {
   expect(sanitizeMarkdown("Hello <script>alert(1)</script> world")).toBe("Hello alert(1) world");

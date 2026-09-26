@@ -4,7 +4,7 @@ import {
   getRegisteredStudioExtensions,
   registerStudioExtension,
   unregisterStudioExtension,
-} from "./studio-extensions";
+} from "../studio-extensions";
 
 test("studio extensions register, replace, and unregister command providers", () => {
   unregisterStudioExtension("test-extension");
@@ -25,7 +25,7 @@ test("studio extensions register, replace, and unregister command providers", ()
 
 test("extension modules accept a default factory through the plugin seam", async () => {
   const moduleUrl = `data:text/javascript,${encodeURIComponent("export default () => ({ id: 'module-extension', name: 'Module Extension' })")}`;
-  const unregister = await import("./studio-extensions").then(({ loadStudioExtension }) =>
+  const unregister = await import("../../studio-extensions").then(({ loadStudioExtension }) =>
     loadStudioExtension(moduleUrl),
   );
 

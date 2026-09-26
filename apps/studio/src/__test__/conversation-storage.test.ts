@@ -5,7 +5,7 @@ import {
   CONVERSATION_STORAGE_KEY,
   loadConversationMessages,
   persistConversationMessages,
-} from "./conversation-storage";
+} from "../features/ai-assistant/conversation-storage";
 
 test("conversation messages persist and load from storage", () => {
   const values = new Map<string, string>();

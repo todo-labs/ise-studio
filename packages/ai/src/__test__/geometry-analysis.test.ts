@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { analyzeOffGeometry } from "./ai-tools";
+import { analyzeOffGeometry } from "../ai-tools";
 
 test("scene analysis reports bounds and overhang risk for OFF geometry", () => {
   const off = [

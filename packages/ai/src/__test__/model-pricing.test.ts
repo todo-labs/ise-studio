@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { calculateCost, clearModelPricingCache, getModelPricing } from "./model-pricing";
+import { calculateCost, clearModelPricingCache, getModelPricing } from "../model-pricing";
 
 test("pricing parses provider data and calculates USD cost", async () => {
   const originalFetch = globalThis.fetch;

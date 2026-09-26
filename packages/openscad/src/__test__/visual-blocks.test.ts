@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { createVisualBlock, generateOpenSCADFromBlocks } from "./visual-blocks";
+import { createVisualBlock, generateOpenSCADFromBlocks } from "../visual-blocks";
 
 test("visual blocks generate valid OpenSCAD primitives", () => {
   const cube = createVisualBlock("cube", "base");

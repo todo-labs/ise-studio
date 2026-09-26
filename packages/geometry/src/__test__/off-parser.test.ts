@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { parseBinarySTL, parseOFF } from "./off-parser";
+import { parseBinarySTL, parseOFF } from "../off-parser";
 
 test("OFF parser triangulates faces and computes normals", () => {
   const mesh = parseOFF(`OFF\n3 1 0\n0 0 0\n1 0 0\n0 1 0\n3 0 1 2`);

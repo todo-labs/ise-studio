@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { reverseEngineerSTL } from "./stl-reverse-engineering";
+import { reverseEngineerSTL } from "../stl-reverse-engineering";
 
 const asciiBox = `solid box
 facet normal 0 0 1

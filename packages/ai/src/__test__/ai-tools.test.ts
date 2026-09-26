@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { runLocalTool } from "./ai-tools";
+import { runLocalTool } from "../ai-tools";
 
 test("selection patching changes only the active range", async () => {
   const result = JSON.parse(

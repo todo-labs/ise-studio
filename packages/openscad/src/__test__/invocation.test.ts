@@ -1,15 +1,12 @@
 import { expect, test } from "bun:test";
 
-import { buildCompileInvocation, buildSyntaxInvocation } from "./invocation";
-import { parseSyntaxErrors } from "./syntax";
+import { buildCompileInvocation, buildSyntaxInvocation } from "../invocation";
+import { parseSyntaxErrors } from "../syntax";
 
-test("compile invocation normalizes paths and injects preview only into the entry file", () => {
+test("compile invocation normalizes the source path and injects preview", () => {
   const built = buildCompileInvocation({
-    files: [
-      { path: "main.scad", content: "cube(1);" },
-      { path: "lib.scad", content: "module part() {}" },
-    ],
-    entryPath: "main.scad",
+    code: "cube(1);",
+    fileName: "main.scad",
     format: "off",
     preview: true,
   });
@@ -22,20 +19,16 @@ test("compile invocation normalizes paths and injects preview only into the entr
     "/output.off",
     "/main.scad",
   ]);
-  expect(built.invocation.inputs[0]).toEqual({
+  expect(built.invocation.inputs).toEqual([{
     path: "/main.scad",
     content: "$preview=true;\ncube(1);",
-  });
-  expect(built.invocation.inputs[1]).toEqual({
-    path: "/lib.scad",
-    content: "module part() {}",
-  });
+  }]);
 });
 
-test("syntax invocation uses an ast output and mounted project sources", () => {
+test("syntax invocation uses an ast output and mounts the source", () => {
   const built = buildSyntaxInvocation({
-    files: [{ path: "main.scad", content: "cube(1);" }],
-    entryPath: "main.scad",
+    code: "cube(1);",
+    fileName: "main.scad",
     preview: true,
   });
 

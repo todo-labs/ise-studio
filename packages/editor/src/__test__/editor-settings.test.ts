@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 
-import { buildOpenSCADCompletionItems } from "./openscad-monaco";
-import { normalizeEditorSettings } from "./editor-settings";
-import { formatOpenSCAD } from "./openscad-format";
+import { buildOpenSCADCompletionItems } from "../openscad-monaco";
+import { normalizeEditorSettings } from "../editor-settings";
+import { formatOpenSCAD } from "../openscad-format";
 
 test("editor settings normalization clamps and defaults invalid values", () => {
   expect(

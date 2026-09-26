@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { accumulateConversationUsage } from "./conversation-usage";
+import { accumulateConversationUsage } from "../conversation-usage";
 
 test("conversation usage supports current and legacy AI SDK token fields", () => {
   expect(
