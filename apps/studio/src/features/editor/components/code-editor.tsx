@@ -11,9 +11,7 @@ import {
   loadEditorSettings,
   type EditorSettings,
   installOpenSCADMonaco,
-  formatOpenSCAD,
 } from "@ise-studio/editor";
-import { FOCUS_EDITOR_EVENT, FORMAT_DOCUMENT_EVENT } from "@ise-studio/ui/studio-events";
 
 interface CodeEditorProps {
   code: string;
@@ -76,13 +74,6 @@ export function CodeEditor({ code, filePath, onCodeChange, onSelectionChange }: 
   };
 
   useEffect(() => {
-    const focusEditor = () => {
-      const editor = editorRef.current as { focus?: () => void } | null;
-      editor?.focus?.();
-    };
-    const formatDocument = () => onCodeChange(formatOpenSCAD(code));
-    window.addEventListener(FOCUS_EDITOR_EVENT, focusEditor);
-    window.addEventListener(FORMAT_DOCUMENT_EVENT, formatDocument);
     const handleEditorSettingsChange = (event: Event) => {
       const nextSettings = (event as CustomEvent<EditorSettings>).detail;
       setEditorSettings(nextSettings ?? loadEditorSettings());
@@ -92,8 +83,6 @@ export function CodeEditor({ code, filePath, onCodeChange, onSelectionChange }: 
 
     return () => {
       window.removeEventListener(EDITOR_SETTINGS_EVENT, handleEditorSettingsChange);
-      window.removeEventListener(FOCUS_EDITOR_EVENT, focusEditor);
-      window.removeEventListener(FORMAT_DOCUMENT_EVENT, formatDocument);
       selectionDisposableRef.current?.dispose();
       selectionDisposableRef.current = null;
     };

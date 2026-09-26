@@ -5,11 +5,8 @@ import {
   Copy,
   Download,
   FilePlus2,
-  Library,
   Play,
   Puzzle,
-  Settings2,
-  WandSparkles,
   ScanLine,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -40,9 +37,6 @@ import {
   FOCUS_EDITOR_EVENT,
   FORMAT_DOCUMENT_EVENT,
   OPEN_COMMAND_PALETTE_EVENT,
-  OPEN_LIBRARY_BROWSER_EVENT,
-  OPEN_VISUAL_BLOCKS_EVENT,
-  OPEN_SETTINGS_EVENT,
 } from "@ise-studio/ui/studio-events";
 
 interface CommandPaletteProps {
@@ -185,20 +179,6 @@ export function CommandPalette({
         },
       },
       {
-        id: "library",
-        label: "Browse bundled libraries",
-        hint: "Insert a bundled include into the editor",
-        icon: Library,
-        run: () => window.dispatchEvent(new Event(OPEN_LIBRARY_BROWSER_EVENT)),
-      },
-      {
-        id: "visual-blocks",
-        label: "Open visual block mode",
-        hint: "Generate editable OpenSCAD from primitives",
-        icon: WandSparkles,
-        run: () => window.dispatchEvent(new Event(OPEN_VISUAL_BLOCKS_EVENT)),
-      },
-      {
         id: "load-extension",
         label: "Load studio extension",
         hint: "Import a trusted JavaScript extension module",
@@ -215,13 +195,6 @@ export function CommandPalette({
             });
           }
         },
-      },
-      {
-        id: "settings",
-        label: "Open settings",
-        hint: "AI, theme, and editor preferences",
-        icon: Settings2,
-        run: () => window.dispatchEvent(new Event(OPEN_SETTINGS_EVENT)),
       },
       ...extensions.flatMap((extension) =>
         (extension.commands ?? []).map((command) => ({
