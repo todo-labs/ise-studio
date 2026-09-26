@@ -11,15 +11,10 @@ export const AI_SETTINGS_EVENT = "ise-ai-settings-updated";
  * geometry benchmark.
  */
 export const OPENROUTER_MODELS = [
-  { id: "deepseek/deepseek-v4-flash", name: "DeepSeek V4 Flash · budget default" },
-  { id: "xiaomi/mimo-v2.5", name: "MiMo V2.5 · budget 3D" },
-  { id: "openai/gpt-5.6-luna", name: "GPT-5.6 Luna · coding value" },
-  { id: "tencent/hy3", name: "Tencent Hy3 · low-cost reasoning" },
-  { id: "kwaipilot/kat-coder-air-v2.5", name: "KAT-Coder-Air · code edits" },
-  { id: "qwen/qwen3-coder-flash", name: "Qwen3 Coder Flash · fast coding" },
-  { id: "xiaomi/mimo-v2.5-pro", name: "MiMo V2.5 Pro · 3D quality" },
-  { id: "z-ai/glm-5.2", name: "GLM 5.2 · best 3D proxy" },
-  { id: "openrouter/auto", name: "Auto Router · variable cost" },
+  { id: "deepseek/deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash" },
+  { id: "openai/gpt-6-luna", name: "GPT-6 Luna" },
+  { id: "z-ai/glm-5.3-flash", name: "GLM 5.3" },
+  { id: "openrouter/auto", name: "Auto Router" },
 ] as const;
 
 export const OPENROUTER_PROVIDER = {
@@ -27,7 +22,7 @@ export const OPENROUTER_PROVIDER = {
   placeholder: "sk-or-...",
   keyName: "openrouter_api_key",
   modelKey: "openrouter_model",
-  defaultModel: "openai/gpt-5.6-luna",
+  defaultModel: "openai/gpt-6-luna",
 } as const;
 
 export interface AISettings {
