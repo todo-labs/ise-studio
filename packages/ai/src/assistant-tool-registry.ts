@@ -2,10 +2,20 @@ import { jsonSchema, tool } from "ai";
 
 import { runLocalTool, type EditorSelection } from "./ai-tools";
 
+export type AssistantTodoStatus = "pending" | "in_progress" | "completed";
+
+export interface AssistantTodo {
+  id: string;
+  title: string;
+  description?: string;
+  status: AssistantTodoStatus;
+}
+
 export interface AssistantToolRegistryContext {
   getCurrentCode: () => string;
   getCurrentSelection: () => EditorSelection | null;
   onCodeChange: (code: string) => void;
+  onTodosChange?: (todos: AssistantTodo[]) => void;
 }
 
 export function createOpenRouterAssistantTools(context: AssistantToolRegistryContext) {
@@ -60,6 +70,36 @@ export function createOpenRouterAssistantTools(context: AssistantToolRegistryCon
         additionalProperties: false,
       }),
       execute: async (args) => executeLocalTool("search_docs", args, context),
+    }),
+    update_todos: tool({
+      description:
+        "Replace the current task plan with an updated snapshot. Use this for multi-step work, keeping stable IDs and marking each task pending, in_progress, or completed as work progresses.",
+      inputSchema: jsonSchema<{ todos: AssistantTodo[] }>({
+        type: "object",
+        properties: {
+          todos: {
+            type: "array",
+            maxItems: 20,
+            items: {
+              type: "object",
+              properties: {
+                id: { type: "string", minLength: 1, maxLength: 80 },
+                title: { type: "string", minLength: 1, maxLength: 200 },
+                description: { type: "string", maxLength: 500 },
+                status: { type: "string", enum: ["pending", "in_progress", "completed"] },
+              },
+              required: ["id", "title", "status"],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ["todos"],
+        additionalProperties: false,
+      }),
+      execute: async ({ todos }) => {
+        context.onTodosChange?.(todos);
+        return { updated: todos.length };
+      },
     }),
     update_code: tool({
       description: "Replace the entire OpenSCAD code in the editor with new content.",

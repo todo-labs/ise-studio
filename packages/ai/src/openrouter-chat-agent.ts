@@ -2,7 +2,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { Experimental_Agent as ToolLoopAgent } from "ai";
 
 import { type EditorSelection } from "./ai-tools";
-import { createOpenRouterAssistantTools } from "./assistant-tool-registry";
+import { createOpenRouterAssistantTools, type AssistantTodo } from "./assistant-tool-registry";
 
 export interface OpenRouterChatAgentContext {
   apiKey: string;
@@ -11,6 +11,7 @@ export interface OpenRouterChatAgentContext {
   getCurrentCode: () => string;
   getCurrentSelection: () => EditorSelection | null;
   onCodeChange: (code: string) => void;
+  onTodosChange?: (todos: AssistantTodo[]) => void;
 }
 
 export function createOpenRouterChatAgent({
@@ -20,6 +21,7 @@ export function createOpenRouterChatAgent({
   getCurrentCode,
   getCurrentSelection,
   onCodeChange,
+  onTodosChange,
 }: OpenRouterChatAgentContext) {
   const provider = createOpenRouter({ apiKey });
   const modelSettings = useWebSearch ? { web_search_options: { max_results: 5 } } : undefined;
@@ -31,6 +33,7 @@ export function createOpenRouterChatAgent({
       getCurrentCode,
       getCurrentSelection,
       onCodeChange,
+      onTodosChange,
     }),
     prepareCall: async (options) => ({
       ...options,
@@ -47,6 +50,7 @@ function buildSystemPrompt(code: string, selection: EditorSelection | null) {
       "Do not include OpenSCAD code, code blocks, or pasted full-document source in chat responses.",
       "When code needs to be created or changed, use update_code for a full-document replacement or apply_patch_to_selection for a focused edit; never ask the user to copy code from the chat into the editor.",
       "After changing code, use validate_dsl and inspect_scene when appropriate, then reply with a concise summary of what changed, validation status, and any actionable issue.",
+      "For multi-step requests, call update_todos before starting and update the full todo snapshot as tasks move between pending, in_progress, and completed. Keep task IDs stable, mark work complete as it finishes, and skip the plan for simple questions.",
       "For explanations, describe the relevant geometry, modules, parameters, and tradeoffs in prose without reproducing source code.",
       "Use search_docs for OpenSCAD syntax, library references, and examples; use openrouter:web_search only for current external references when needed.",
     ].join(" "),

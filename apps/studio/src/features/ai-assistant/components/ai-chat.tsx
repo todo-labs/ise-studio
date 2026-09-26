@@ -1,5 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, CheckIcon, CopyIcon, GlobeIcon, Trash2Icon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  Bot,
+  CheckCircle2Icon,
+  CheckIcon,
+  CopyIcon,
+  GlobeIcon,
+  ListTodoIcon,
+  LoaderCircleIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import {
   DirectChatTransport,
@@ -69,12 +78,25 @@ import {
   ReasoningTrigger,
 } from "@ise-studio/ui/ai-elements/reasoning";
 import {
+  Queue,
+  QueueItem,
+  QueueItemContent,
+  QueueItemDescription,
+  QueueItemIndicator,
+  QueueList,
+  QueueSection,
+  QueueSectionContent,
+  QueueSectionLabel,
+  QueueSectionTrigger,
+} from "@ise-studio/ui/ai-elements/queue";
+import {
   createOpenRouterChatAgent,
   createOpenRouterAssistantTools,
   accumulateConversationUsage,
   calculateCost,
   getModelPricing,
   type EditorSelection,
+  type AssistantTodo,
   type ModelPricing,
 } from "@ise-studio/ai";
 import {
@@ -133,6 +155,7 @@ export function AIChat({
   );
   const [useWebSearch, setUseWebSearch] = useState(false);
   const [pricing, setPricing] = useState<ModelPricing | null>(null);
+  const [todos, setTodos] = useState<AssistantTodo[]>([]);
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   const [initialMessages] = useState<AssistantUIMessage[]>(
     loadConversationMessages<AssistantUIMessage>,
@@ -178,8 +201,9 @@ export function AIChat({
       getCurrentCode: () => codeRef.current,
       getCurrentSelection: () => selectionRef.current,
       onCodeChange,
+      onTodosChange: setTodos,
     });
-  }, [onCodeChange, settings.apiKey, settings.model, useWebSearch]);
+  }, [onCodeChange, settings.apiKey, settings.model, setTodos, useWebSearch]);
 
   const transport = useMemo(() => {
     if (!agent) return null;
@@ -205,6 +229,7 @@ export function AIChat({
   const handleClearConversation = () => {
     stop();
     clearConversationMessages();
+    setTodos([]);
     setMessages([]);
     setIsClearDialogOpen(false);
   };
@@ -235,6 +260,7 @@ export function AIChat({
     if (!text || status === "submitted" || status === "streaming") return;
 
     setInput("");
+    setTodos([]);
     await sendMessage({ text });
   };
 
@@ -350,46 +376,127 @@ export function AIChat({
         <ConversationScrollButton />
       </Conversation>
 
-      <div className="border-t p-3">
-        <div className="text-muted-foreground mb-2 truncate text-xs">
-          {hasApiKey
-            ? `${OPENROUTER_PROVIDER.name} · ${settings.model}`
-            : "Add your OpenRouter API key in Settings"}
+      <div className="border-t">
+        {todos.length > 0 ? <TodoQueue todos={todos} /> : null}
+        <div className="border-t">
+          <PromptInput
+            className="rounded-none"
+            onSubmit={handleSubmit}
+            onValueChange={setInput}
+            status={status}
+            value={input}
+          >
+            <PromptInputBody>
+              <PromptInputTextarea placeholder="Ask about OpenSCAD..." />
+            </PromptInputBody>
+            <PromptInputFooter>
+              <PromptInputTools>
+                <PromptInputButton
+                  aria-pressed={useWebSearch}
+                  className={cn(useWebSearch && "bg-accent text-accent-foreground")}
+                  onClick={() => setUseWebSearch((value) => !value)}
+                  title="Toggle OpenRouter web search"
+                >
+                  <GlobeIcon className="size-4" />
+                  Search
+                </PromptInputButton>
+                <ModelSelector value={settings.model} onValueChange={handleModelChange}>
+                  <ModelSelectorTrigger className="max-w-44">
+                    <ModelSelectorValue />
+                  </ModelSelectorTrigger>
+                  <ModelSelectorContent>
+                    {OPENROUTER_MODELS.map((model) => (
+                      <ModelSelectorItem key={model.id} value={model.id}>
+                        {model.name}
+                      </ModelSelectorItem>
+                    ))}
+                  </ModelSelectorContent>
+                </ModelSelector>
+              </PromptInputTools>
+              <PromptInputSubmit disabled={!hasApiKey || !input.trim()} status={status} />
+            </PromptInputFooter>
+          </PromptInput>
         </div>
-
-        <PromptInput onSubmit={handleSubmit} onValueChange={setInput} status={status} value={input}>
-          <PromptInputBody>
-            <PromptInputTextarea placeholder="Ask about OpenSCAD..." />
-          </PromptInputBody>
-          <PromptInputFooter>
-            <PromptInputTools>
-              <PromptInputButton
-                aria-pressed={useWebSearch}
-                className={cn(useWebSearch && "bg-accent text-accent-foreground")}
-                onClick={() => setUseWebSearch((value) => !value)}
-                title="Toggle OpenRouter web search"
-              >
-                <GlobeIcon className="size-4" />
-                Search
-              </PromptInputButton>
-              <ModelSelector value={settings.model} onValueChange={handleModelChange}>
-                <ModelSelectorTrigger className="max-w-44">
-                  <ModelSelectorValue />
-                </ModelSelectorTrigger>
-                <ModelSelectorContent>
-                  {OPENROUTER_MODELS.map((model) => (
-                    <ModelSelectorItem key={model.id} value={model.id}>
-                      {model.name}
-                    </ModelSelectorItem>
-                  ))}
-                </ModelSelectorContent>
-              </ModelSelector>
-            </PromptInputTools>
-            <PromptInputSubmit disabled={!hasApiKey || !input.trim()} status={status} />
-          </PromptInputFooter>
-        </PromptInput>
       </div>
     </div>
+  );
+}
+
+function TodoQueue({ todos }: { todos: AssistantTodo[] }) {
+  const inProgress = todos.filter((todo) => todo.status === "in_progress");
+  const pending = todos.filter((todo) => todo.status === "pending");
+  const completed = todos.filter((todo) => todo.status === "completed");
+
+  return (
+    <Queue aria-label="Assistant task plan" className="shrink-0 rounded-none">
+      {inProgress.length > 0 ? (
+        <TodoQueueSection
+          icon={<LoaderCircleIcon aria-hidden="true" className="size-4 animate-spin" />}
+          label="In progress"
+          todos={inProgress}
+        />
+      ) : null}
+      {pending.length > 0 ? (
+        <TodoQueueSection
+          icon={<ListTodoIcon aria-hidden="true" className="size-4" />}
+          label="To do"
+          todos={pending}
+        />
+      ) : null}
+      {completed.length > 0 ? (
+        <TodoQueueSection
+          defaultOpen={false}
+          completed
+          icon={<CheckCircle2Icon aria-hidden="true" className="size-4" />}
+          label="Done"
+          todos={completed}
+        />
+      ) : null}
+    </Queue>
+  );
+}
+
+function TodoQueueSection({
+  defaultOpen = true,
+  completed = false,
+  icon,
+  label,
+  todos,
+}: {
+  defaultOpen?: boolean;
+  completed?: boolean;
+  icon: ReactNode;
+  label: string;
+  todos: AssistantTodo[];
+}) {
+  return (
+    <QueueSection defaultOpen={defaultOpen}>
+      <QueueSectionTrigger aria-label={`${label}: ${todos.length} tasks`}>
+        <QueueSectionLabel count={todos.length} icon={icon} label={label} />
+      </QueueSectionTrigger>
+      <QueueSectionContent>
+        <QueueList aria-label={`${label} tasks`}>
+          {todos.map((todo) => (
+            <QueueItem key={todo.id}>
+              <div className="flex min-w-0 items-start gap-2">
+                <QueueItemIndicator completed={completed} />
+                <QueueItemContent
+                  className={todo.status === "in_progress" ? "font-medium text-foreground" : undefined}
+                  completed={completed}
+                >
+                  {todo.title}
+                </QueueItemContent>
+              </div>
+              {todo.description ? (
+                <QueueItemDescription completed={completed}>
+                  {todo.description}
+                </QueueItemDescription>
+              ) : null}
+            </QueueItem>
+          ))}
+        </QueueList>
+      </QueueSectionContent>
+    </QueueSection>
   );
 }
 
