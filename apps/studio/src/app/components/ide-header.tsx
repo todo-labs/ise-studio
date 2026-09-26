@@ -1,5 +1,5 @@
 import { Button, buttonVariants } from "@ise-studio/ui/button";
-import { Command, MessageSquare } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { SettingsModal } from "@/features/settings";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@ise-studio/ui/studio-events";
 
@@ -31,8 +31,7 @@ export function IDEHeader({ isChatOpen, onToggleChat }: IDEHeaderProps) {
             size="sm"
             variant="ghost"
           >
-            <Command className="h-4 w-4" />
-            <span className="hidden text-xs sm:inline">⌘K</span>
+            <span className="text-xs">⌘K</span>
           </Button>
           <Button
             variant={isChatOpen ? "default" : "ghost"}
