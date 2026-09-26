@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Download, Loader2, Play, RotateCcw, TriangleAlert } from "lucide-react";
 
 import { Badge } from "@ise-studio/ui/badge";
@@ -20,9 +20,8 @@ interface PreviewPanelProps {
 export function PreviewPanel({ code, fileName, onCodeChange, onSuccessfulCompile }: PreviewPanelProps) {
   const [showExport, setShowExport] = useState(false);
   const [viewerError, setViewerError] = useState<string | null>(null);
-  const source = useMemo(() => ({ path: fileName, content: code }), [code, fileName]);
   const workflow = usePreviewWorkflow({
-    source,
+    code,
     fileName,
     autoPreview: true,
   });

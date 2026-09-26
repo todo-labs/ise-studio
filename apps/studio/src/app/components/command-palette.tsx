@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   AlignLeft,
-  Archive,
   Code2,
   Copy,
   Download,
@@ -32,8 +31,6 @@ import {
 } from "@ise-studio/ui/studio-extensions";
 import {
   buildCodeShareUrl,
-  exportProjectArchive,
-  importProjectArchive,
   importScadFile,
   importSTLFile,
 } from "../file-io";
@@ -145,25 +142,6 @@ export function CommandPalette({
         },
       },
       {
-        id: "import-archive",
-        label: "Import project archive",
-        hint: "Restore an .ise.zip document",
-        icon: Archive,
-        run: async () => {
-          try {
-            const result = await importProjectArchive();
-            if (result) {
-              onCodeChange(result.code);
-              onFileNameChange(result.fileName);
-            }
-          } catch (error) {
-            toast.error("Could not import the project archive", {
-              description: error instanceof Error ? error.message : "Archive access failed.",
-            });
-          }
-        },
-      },
-      {
         id: "reverse-engineer-stl",
         label: "Reverse engineer STL",
         hint: "Infer primitives and generate editable OpenSCAD",
@@ -205,13 +183,6 @@ export function CommandPalette({
             toast.error("Clipboard access is unavailable");
           }
         },
-      },
-      {
-        id: "export-archive",
-        label: "Export project archive",
-        hint: "Save a portable .ise.zip document",
-        icon: Archive,
-        run: () => exportProjectArchive(code, fileName),
       },
       {
         id: "library",

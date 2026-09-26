@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import {
-  compileOpenSCADProject,
-  type CompileResult,
-  type OpenSCADProjectFile,
-} from "@ise-studio/openscad";
+import { compileOpenSCAD, type CompileResult } from "@ise-studio/openscad";
 
 export type ExportStatus = "idle" | "exporting" | "saving" | "completed" | "error";
 
@@ -20,12 +16,12 @@ export interface ExportSTLOperation {
 }
 
 interface PreviewWorkflowOptions {
-  source: OpenSCADProjectFile;
+  code: string;
   fileName: string;
   autoPreview: boolean;
 }
 
-export function usePreviewWorkflow({ source, fileName, autoPreview }: PreviewWorkflowOptions) {
+export function usePreviewWorkflow({ code, fileName, autoPreview }: PreviewWorkflowOptions) {
   const [isCompiling, setIsCompiling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [geometryData, setGeometryData] = useState<Uint8Array | null>(null);
@@ -36,8 +32,6 @@ export function usePreviewWorkflow({ source, fileName, autoPreview }: PreviewWor
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const compileControllerRef = useRef<AbortController | null>(null);
 
-  const sources = useMemo(() => [source], [source]);
-
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -46,7 +40,7 @@ export function usePreviewWorkflow({ source, fileName, autoPreview }: PreviewWor
   }, []);
 
   const renderPreview = useCallback(async () => {
-    if (typeof source.content !== "string" || !source.content.trim()) {
+    if (!code.trim()) {
       setError("Enter OpenSCAD code to compile.");
       return;
     }
@@ -58,9 +52,8 @@ export function usePreviewWorkflow({ source, fileName, autoPreview }: PreviewWor
     setError(null);
 
     try {
-      const result: CompileResult = await compileOpenSCADProject({
-        files: sources,
-        entryPath: source.path,
+      const result: CompileResult = await compileOpenSCAD(code, {
+        fileName,
         format: "off",
         preview: true,
         signal: controller.signal,
@@ -85,10 +78,10 @@ export function usePreviewWorkflow({ source, fileName, autoPreview }: PreviewWor
         setIsCompiling(false);
       }
     }
-  }, [source, sources]);
+  }, [code, fileName]);
 
   useEffect(() => {
-    if (!autoPreview || typeof source.content !== "string" || !source.content.trim()) return;
+    if (!autoPreview || !code.trim()) return;
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => void renderPreview(), 1_000);
@@ -96,34 +89,33 @@ export function usePreviewWorkflow({ source, fileName, autoPreview }: PreviewWor
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [autoPreview, renderPreview, source]);
+  }, [autoPreview, code, renderPreview]);
 
   const exportSCAD = useCallback(() => {
-    if (typeof source.content !== "string" || !source.content.trim()) {
+    if (!code.trim()) {
       setError("Nothing to export.");
       return;
     }
 
     try {
       const downloadName = fileName.endsWith(".scad") ? fileName : `${fileName}.scad`;
-      downloadBlob(new Blob([source.content], { type: "text/plain" }), downloadName);
+      downloadBlob(new Blob([code], { type: "text/plain" }), downloadName);
       toast.success("SCAD file exported successfully", { description: `Saved as ${downloadName}` });
     } catch {
       toast.error("Failed to export SCAD file");
     }
-  }, [fileName, source.content]);
+  }, [code, fileName]);
 
   const exportSTLOperation = useMemo<ExportSTLOperation>(
     () => ({
       run: async (onProgress) => {
-        if (typeof source.content !== "string" || !source.content.trim()) {
+        if (!code.trim()) {
           throw new Error("Enter OpenSCAD code before exporting STL.");
         }
 
         onProgress({ status: "exporting", progress: 0, statusText: "Rendering STL..." });
-        const result = await compileOpenSCADProject({
-          files: sources,
-          entryPath: source.path,
+        const result = await compileOpenSCAD(code, {
+          fileName,
           format: "stl",
           onProgress: (progress, statusText) =>
             onProgress({ status: "exporting", progress, statusText: `${statusText} (${progress}%)...` }),
@@ -141,12 +133,12 @@ export function usePreviewWorkflow({ source, fileName, autoPreview }: PreviewWor
         await saveSTLBlob(blob, fileName.replace(/\.scad$/i, "") + ".stl");
       },
     }),
-    [fileName, sources, source.content, source.path],
+    [code, fileName],
   );
 
   return {
-    canRender: Boolean(source.content),
-    canExport: typeof source.content === "string" && Boolean(source.content.trim()),
+    canRender: Boolean(code),
+    canExport: Boolean(code.trim()),
     error,
     exportSCAD,
     exportSTLOperation,

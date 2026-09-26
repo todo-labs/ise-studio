@@ -36,7 +36,6 @@ export function persistCode(code: string, storage?: Pick<Storage, "setItem">): b
 export function useSingleFile() {
   const [code, setCode] = useState(loadCode);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   useEffect(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => persistCode(code), SAVE_DELAY_MS);
@@ -44,10 +43,6 @@ export function useSingleFile() {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
   }, [code]);
-
-  const handleCodeChange = useCallback((newCode: string) => {
-    setCode(newCode);
-  }, []);
-
+  const handleCodeChange = useCallback((newCode: string) => setCode(newCode), []);
   return { code, setCode: handleCodeChange };
 }

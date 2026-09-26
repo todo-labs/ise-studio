@@ -1,5 +1,4 @@
 import { runOpenSCAD } from "./worker-client";
-import type { CompileProjectFile } from "./compiler";
 import { buildSyntaxInvocation } from "./invocation";
 
 export interface SyntaxCheckResult {
@@ -18,11 +17,12 @@ export interface SyntaxError {
 
 export async function checkSyntax(
   code: string,
-  options: { files?: CompileProjectFile[]; entryPath?: string } = {},
+  options: { fileName?: string } = {},
 ): Promise<SyntaxCheckResult> {
+  const fileName = options.fileName ?? "input.scad";
   const { invocation, entryPath } = buildSyntaxInvocation({
-    files: options.files?.length ? options.files : [{ path: "input.scad", content: code }],
-    entryPath: options.entryPath ?? "input.scad",
+    code,
+    fileName,
     preview: true,
   });
 

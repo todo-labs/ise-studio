@@ -1,12 +1,6 @@
-import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { reverseEngineerSTL } from "@ise-studio/geometry";
 
 export interface ImportedScadFile {
-  code: string;
-  fileName: string;
-}
-
-export interface PortableProject {
   code: string;
   fileName: string;
 }
@@ -83,40 +77,6 @@ export async function importSTLFile(): Promise<ImportedSTLFile | null> {
   };
 }
 
-export async function importProjectArchive(): Promise<PortableProject | null> {
-  const file = await chooseLocalFile(".zip,application/zip", "Project archive");
-  if (!file) return null;
-  const archive = unzipSync(new Uint8Array(await file.arrayBuffer()));
-  const manifest = archive["ise-studio.json"];
-  if (!manifest) throw new Error("This archive does not contain an ISE Studio document.");
-  const parsed: unknown = JSON.parse(strFromU8(manifest));
-  if (
-    !parsed ||
-    typeof parsed !== "object" ||
-    typeof (parsed as PortableProject).code !== "string"
-  ) {
-    throw new Error("The ISE Studio archive manifest is invalid.");
-  }
-  const project = parsed as PortableProject;
-  return { code: project.code, fileName: ensureScadExtension(project.fileName || "main.scad") };
-}
-
-export function exportProjectArchive(code: string, fileName: string) {
-  downloadBytes(
-    createProjectArchive(code, fileName),
-    fileName.replace(/\.scad$/i, "") + ".ise.zip",
-    "application/zip",
-  );
-}
-
-export function createProjectArchive(code: string, fileName: string) {
-  return zipSync({
-    "ise-studio.json": strToU8(
-      JSON.stringify({ version: 1, code, fileName: ensureScadExtension(fileName) }),
-    ),
-  });
-}
-
 export async function exportScadFile(code: string, fileName: string) {
   const blob = new Blob([code], { type: "text/plain;charset=utf-8" });
   const downloadName = ensureScadExtension(fileName);
@@ -189,18 +149,5 @@ async function chooseLocalFile(accept: string, description: string) {
 
 function filePickerTypes(accept: string) {
   if (accept.includes(".stl")) return { "model/stl": [".stl"] };
-  if (accept.includes(".zip")) return { "application/zip": [".zip"] };
   return { "text/plain": [".scad"] };
-}
-
-function downloadBytes(bytes: Uint8Array, fileName: string, mimeType: string) {
-  const blob = new Blob([bytes.slice().buffer as ArrayBuffer], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = fileName;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }

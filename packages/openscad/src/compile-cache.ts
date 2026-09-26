@@ -1,4 +1,4 @@
-import type { OpenSCADExportFormat, OpenSCADProjectFile } from "./invocation";
+import type { OpenSCADExportFormat } from "./invocation";
 
 const DB_NAME = "ise-studio-openscad-cache";
 const DB_VERSION = 1;
@@ -13,21 +13,18 @@ interface GeometryCacheEntry {
 }
 
 export async function getCompileCacheKey(options: {
-  files: OpenSCADProjectFile[];
-  entryPath: string;
+  code: string;
+  fileName: string;
   format: OpenSCADExportFormat;
   preview: boolean;
 }) {
-  const contents = await Promise.all(
-    options.files.map(async (file) => `${file.path}:${await contentToString(file.content)}`),
-  );
   return hashString(
     JSON.stringify({
       version: CACHE_VERSION,
-      entryPath: options.entryPath,
+      fileName: options.fileName,
       format: options.format,
       preview: options.preview,
-      files: contents,
+      code: options.code,
     }),
   );
 }
@@ -87,13 +84,6 @@ async function openStore(mode: IDBTransactionMode): Promise<IDBObjectStore | nul
   } catch {
     return null;
   }
-}
-
-async function contentToString(content: OpenSCADProjectFile["content"]) {
-  if (typeof content === "string") return content;
-  if (content instanceof Uint8Array) return new TextDecoder().decode(content);
-  if (content instanceof ArrayBuffer) return new TextDecoder().decode(content);
-  return new TextDecoder().decode(await content.arrayBuffer());
 }
 
 function hashString(value: string) {

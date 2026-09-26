@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@ise-studio/ui/resizable";
 import { IDEHeader } from "./components/ide-header";
 import { useSingleFile } from "./use-studio-workspace";
-import { CodeEditor, LibraryBrowser, VisualBlocksPanel } from "@/features/editor";
+import { CodeEditor } from "@/features/editor";
 import { ErrorBoundary } from "./components/error-boundary";
 import { CommandPalette } from "./components/command-palette";
 import { exportScadFile } from "./file-io";
@@ -44,7 +44,6 @@ export function IDELayout() {
         toggleChat();
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [toggleChat]);
@@ -52,19 +51,12 @@ export function IDELayout() {
   return (
     <div className="bg-background flex h-screen flex-col">
       <IDEHeader isChatOpen={isChatOpen} onToggleChat={toggleChat} />
-
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         {isChatOpen && (
           <>
             <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
               <ErrorBoundary name="AI assistant">
-                <Suspense
-                  fallback={
-                    <div className="text-muted-foreground grid h-full place-items-center text-sm">
-                      Loading assistant…
-                    </div>
-                  }
-                >
+                <Suspense fallback={<div className="text-muted-foreground grid h-full place-items-center text-sm">Loading assistant…</div>}>
                   <AIChat
                     isOpen={isChatOpen}
                     onClose={() => useStudioLayoutStore.getState().setIsChatOpen(false)}
@@ -78,35 +70,17 @@ export function IDELayout() {
             <ResizableHandle withHandle />
           </>
         )}
-
         <ResizablePanel defaultSize={isChatOpen ? 75 : 100}>
           <ResizablePanelGroup direction="horizontal">
             <ResizablePanel defaultSize={50} minSize={30}>
-              <div className="flex h-full min-w-0 flex-col">
-                <div className="min-h-0 flex-1">
-                  <ErrorBoundary name="Editor">
-                    <CodeEditor
-                      code={code}
-                      filePath={fileName}
-                      onCodeChange={setCode}
-                      onSelectionChange={setSelection}
-                    />
-                  </ErrorBoundary>
-                </div>
-              </div>
+              <ErrorBoundary name="Editor">
+                <CodeEditor code={code} filePath={fileName} onCodeChange={setCode} onSelectionChange={setSelection} />
+              </ErrorBoundary>
             </ResizablePanel>
-
             <ResizableHandle withHandle />
-
             <ResizablePanel defaultSize={50} minSize={30}>
               <ErrorBoundary name="Preview">
-                <Suspense
-                  fallback={
-                    <div className="text-muted-foreground grid h-full place-items-center text-sm">
-                      Loading preview…
-                    </div>
-                  }
-                >
+                <Suspense fallback={<div className="text-muted-foreground grid h-full place-items-center text-sm">Loading preview…</div>}>
                   <PreviewPanel
                     fileName={fileName}
                     code={code}
@@ -119,17 +93,8 @@ export function IDELayout() {
           </ResizablePanelGroup>
         </ResizablePanel>
       </ResizablePanelGroup>
-
       <HistoryPanel entries={entries} onRestore={setCode} />
-
-      <CommandPalette
-        code={code}
-        fileName={fileName}
-        onCodeChange={setCode}
-        onFileNameChange={setFileName}
-      />
-      <LibraryBrowser code={code} onCodeChange={setCode} />
-      <VisualBlocksPanel onCodeChange={setCode} />
+      <CommandPalette code={code} fileName={fileName} onCodeChange={setCode} onFileNameChange={setFileName} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { checkSyntax, compileOpenSCADProject, searchOpenSCADDocs } from "@ise-studio/openscad";
+import { checkSyntax, compileOpenSCAD, searchOpenSCADDocs } from "@ise-studio/openscad";
 import {
   getOpenSCADLibraryAliases,
   getOpenSCADLibraryContext,
@@ -47,10 +47,7 @@ async function validateDsl(args: ToolArguments, context: ToolContext) {
   }
 
   try {
-    const result = await checkSyntax(code, {
-      files: [{ path: "main.scad", content: code }],
-      entryPath: "main.scad",
-    });
+    const result = await checkSyntax(code, { fileName: "main.scad" });
     return {
       valid: result.valid,
       errors: result.errors.length > 0 ? result.errors : null,
@@ -71,9 +68,8 @@ async function inspectScene(args: ToolArguments, context: ToolContext) {
   }
 
   try {
-    const result = await compileOpenSCADProject({
-      files: [{ path: "main.scad", content: code }],
-      entryPath: "main.scad",
+    const result = await compileOpenSCAD(code, {
+      fileName: "main.scad",
       format: "off",
       preview: true,
     });

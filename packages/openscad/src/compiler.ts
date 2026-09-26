@@ -3,7 +3,6 @@ import { getCompileCacheKey, readCachedGeometry, writeCachedGeometry } from "./c
 import {
   buildCompileInvocation,
   type OpenSCADExportFormat,
-  type OpenSCADProjectFile,
 } from "./invocation";
 
 export interface CompileResult {
@@ -14,21 +13,25 @@ export interface CompileResult {
   format: OpenSCADExportFormat;
 }
 
-export type CompileProjectFile = OpenSCADProjectFile;
-
-export async function compileOpenSCADProject(options: {
-  files: CompileProjectFile[];
-  entryPath: string;
+export async function compileOpenSCAD(code: string, options: {
+  fileName?: string;
   format?: OpenSCADExportFormat;
   preview?: boolean;
   onProgress?: ProgressCallback;
   signal?: AbortSignal;
   timeoutMs?: number;
-}): Promise<CompileResult> {
-  const { invocation, outputPath, format } = buildCompileInvocation(options);
+} = {}): Promise<CompileResult> {
+  const fileName = options.fileName ?? "input.scad";
+  const format = options.format ?? "stl";
+  const { invocation, outputPath } = buildCompileInvocation({
+    code,
+    fileName,
+    format,
+    preview: options.preview,
+  });
   const cacheKey = await getCompileCacheKey({
-    files: options.files,
-    entryPath: options.entryPath,
+    code,
+    fileName,
     format,
     preview: Boolean(options.preview),
   });
@@ -60,29 +63,4 @@ export async function compileOpenSCADProject(options: {
     exitCode: result.exitCode,
     format,
   };
-}
-
-export async function compileOpenSCAD(
-  code: string,
-  options: {
-    format?: OpenSCADExportFormat;
-    preview?: boolean;
-    fileName?: string;
-    onProgress?: ProgressCallback;
-    signal?: AbortSignal;
-    timeoutMs?: number;
-  } = {},
-): Promise<CompileResult> {
-  const format = options.format ?? "stl";
-  const fileName = options.fileName ?? "input.scad";
-
-  return compileOpenSCADProject({
-    files: [{ path: fileName, content: code }],
-    entryPath: fileName,
-    format,
-    preview: options.preview,
-    onProgress: options.onProgress,
-    signal: options.signal,
-    timeoutMs: options.timeoutMs,
-  });
 }
