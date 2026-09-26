@@ -136,10 +136,6 @@ packages/
 ├── openscad/                  # OpenSCAD compiler, worker client, docs, cache
 └── ui/                        # Shared UI primitives and AI UI elements
 
-docs/
-├── CONTEXT.md                 # Domain and architecture context
-└── adr/                       # Architecture decision records
-
 tests/                         # End-to-end and integration tests
 ```
 
